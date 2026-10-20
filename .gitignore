@@ -69,6 +69,7 @@ web_modules/
 .env
 .env.*
 !.env.example
+!.env.example
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -147,3 +148,13 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Generated code walkthroughs (local only)
+walkthroughs/
+
+# Extension build output
+.output/
+.wxt/
+
+# Editor settings
+.idea/

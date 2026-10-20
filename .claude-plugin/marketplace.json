@@ -1,0 +1,12 @@
+{
+  "name": "code-walkthroughs",
+  "owner": { "name": "Robin Nagpal" },
+  "description": "Claude skills for audio code walkthroughs played on GitHub.",
+  "plugins": [
+    {
+      "name": "code-walkthrough",
+      "source": "./",
+      "description": "Generate audio code walkthroughs pinned to a commit, for playback on GitHub with the Code Walkthroughs Chrome extension."
+    }
+  ]
+}

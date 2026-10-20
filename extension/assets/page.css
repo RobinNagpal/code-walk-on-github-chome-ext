@@ -1,0 +1,173 @@
+/* Shared styles for the popup and the settings page. */
+:root {
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #59636e;
+  --border: #d1d9e0;
+  --subtle: #f6f8fa;
+  --accent: #0969da;
+  --accent-fg: #ffffff;
+  --warning-bg: #fff8c5;
+  --error: #d1242f;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --fg: #f0f6fc;
+    --muted: #9198a1;
+    --border: #3d444d;
+    --subtle: #151b23;
+    --accent: #4493f8;
+    --warning-bg: #3b2e00;
+    --error: #f85149;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+}
+
+h1 {
+  margin: 0;
+  font-size: 15px;
+}
+
+p {
+  margin: 0 0 8px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.button {
+  font: inherit;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--subtle);
+  color: var(--fg);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.button:hover {
+  filter: brightness(0.97);
+}
+
+.button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 600;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.link {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.library {
+  padding: 12px 14px;
+}
+
+.folder {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--subtle);
+}
+
+.folder .label {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.folder .value {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.folder .actions {
+  display: flex;
+  gap: 8px;
+}
+
+.walkthroughs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.walkthroughs li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.walkthroughs li:last-child {
+  border-bottom: 0;
+}
+
+.walkthroughs .info {
+  flex: 1;
+  min-width: 0;
+}
+
+.walkthroughs .title {
+  font-weight: 600;
+}
+
+.walkthroughs .description {
+  color: var(--fg);
+}
+
+.walkthroughs .meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.empty {
+  padding: 8px 0;
+}
+
+.warning {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--warning-bg);
+  font-size: 12px;
+}
+
+.error {
+  color: var(--error);
+}

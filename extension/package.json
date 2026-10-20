@@ -1,0 +1,24 @@
+{
+  "name": "code-walkthroughs-extension",
+  "description": "Play audio code walkthroughs on GitHub",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "compile": "tsc --noEmit",
+    "postinstall": "wxt prepare"
+  },
+  "dependencies": {
+    "idb-keyval": "6.3.0",
+    "preact": "10.29.8"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "2.10.2",
+    "@types/wicg-file-system-access": "2023.10.7",
+    "typescript": "5.9.3",
+    "wxt": "0.20.27"
+  }
+}

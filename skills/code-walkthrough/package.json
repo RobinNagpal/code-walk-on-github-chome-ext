@@ -1,0 +1,13 @@
+{
+  "name": "code-walkthrough-skill",
+  "private": true,
+  "type": "module",
+  "description": "Scripts for the code-walkthrough Claude skill",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "dependencies": {
+    "@breezystack/lamejs": "1.2.7",
+    "msedge-tts": "2.1.0"
+  }
+}

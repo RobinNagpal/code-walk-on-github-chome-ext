@@ -1,0 +1,8 @@
+{
+  "name": "code-walkthrough",
+  "version": "0.1.0",
+  "description": "Generate audio code walkthroughs pinned to a commit, for playback on GitHub with the Code Walkthroughs Chrome extension.",
+  "author": { "name": "Robin Nagpal" },
+  "repository": "https://github.com/RobinNagpal/code-walk-on-github-chome-ext",
+  "license": "MIT"
+}

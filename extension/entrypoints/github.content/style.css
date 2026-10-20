@@ -1,0 +1,329 @@
+/* Styles for the floating player. Injected into its shadow root only. */
+:host {
+  all: initial;
+}
+
+.player {
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #59636e;
+  --border: #d1d9e0;
+  --subtle: #f6f8fa;
+  --accent: #0969da;
+  --accent-fg: #ffffff;
+  --highlight: #fff8c5;
+
+  position: fixed;
+  z-index: 2147483000;
+  width: 360px;
+  max-height: calc(100vh - 24px);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(31, 35, 40, 0.18), 0 2px 6px rgba(31, 35, 40, 0.08);
+  font: 13px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  overflow: hidden;
+}
+
+@media (prefers-color-scheme: dark) {
+  .player {
+    --bg: #151b23;
+    --fg: #f0f6fc;
+    --muted: #9198a1;
+    --border: #3d444d;
+    --subtle: #212830;
+    --accent: #4493f8;
+    --accent-fg: #ffffff;
+    --highlight: #3b2e00;
+  }
+}
+
+.player *,
+.player *::before,
+.player *::after {
+  box-sizing: border-box;
+}
+
+button,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  padding: 4px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--subtle);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+button:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Header — the drag handle */
+header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px 8px 6px;
+  background: var(--subtle);
+  border-bottom: 1px solid var(--border);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+header:active {
+  cursor: grabbing;
+}
+
+.grip {
+  display: flex;
+  color: var(--muted);
+}
+
+.heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.walkthrough-title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Current slide */
+.slide {
+  padding: 12px 14px 4px;
+}
+
+.slide h2 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.slide p {
+  margin: 0 0 8px;
+}
+
+.location {
+  display: block;
+  max-width: 100%;
+  padding: 2px 6px;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+/* Progress */
+.progress {
+  margin: 8px 14px 0;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--subtle);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.25s linear;
+}
+
+.times {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 14px 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px 10px;
+}
+
+.primary {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--accent);
+  filter: brightness(1.1);
+}
+
+select {
+  margin-left: auto;
+  padding: 3px 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.mode {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mode button {
+  border-radius: 0;
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+.mode button.on {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.notice {
+  margin: 0 12px 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--highlight);
+  font-size: 12px;
+}
+
+.notice-action {
+  display: block;
+  margin-top: 4px;
+  padding: 0;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+/* Slide list */
+.list-toggle {
+  justify-content: flex-start;
+  width: 100%;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.list-toggle svg {
+  transition: transform 0.15s;
+}
+
+.list-toggle.open svg {
+  transform: rotate(90deg);
+}
+
+.slides {
+  list-style: none;
+  margin: 0;
+  padding: 0 6px 6px;
+  overflow-y: auto;
+  max-height: 260px;
+}
+
+.slides button {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 6px;
+  text-align: left;
+}
+
+.slides button[aria-current='true'] {
+  background: var(--subtle);
+  font-weight: 600;
+}
+
+.slides .number {
+  flex: 0 0 20px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.slides .title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slides .duration {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Minimized pill */
+.player.mini {
+  width: auto;
+  max-width: 320px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 8px;
+  border-radius: 999px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.mini .primary {
+  width: 30px;
+  height: 30px;
+  flex: none;
+}
+
+.mini-label {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
