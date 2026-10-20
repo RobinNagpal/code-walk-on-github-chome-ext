@@ -66,8 +66,14 @@ You need three things. If the user didn't give them, ask once, in one question, 
 - **Name:** derive a short hyphen-separated id from the topic (for example `auth-token-refresh`) unless the user gave one.
 
 **Budget the words before writing.** At 165 spoken words a minute, total words = minutes × 165. Pick a slide count that
-gives each slide 90–200 words. That is 8–15 slides for 10 minutes, and never more than 25. Per-slide budget = total ÷
-slides. Write to that budget; it is much cheaper than cutting afterwards.
+gives each slide 90–200 words: 8–15 slides for 10 minutes, about 30 for 20 minutes. Use the slide count the user asks
+for when they give one. Per-slide budget = total ÷ slides. Write to that budget; it is much cheaper than cutting
+afterwards.
+
+**Know the audience.** Unless the user says otherwise, assume the listener is new to the code and its background:
+explain the problem it solves and any outside concepts it relies on before diving in. For a long walkthrough, open
+with the high-level architecture (what the parts are and how data flows between them), then walk the main code path,
+showing the key lines, the library calls and what they do, and the important data structures.
 
 ## 3. Find the code and pin the commit
 

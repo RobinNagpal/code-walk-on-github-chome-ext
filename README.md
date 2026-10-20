@@ -18,16 +18,20 @@ Every walkthrough is pinned to a commit, so its links keep pointing at the code 
 
 ## Install the Chrome extension
 
-You need Node.js 22.18 or newer and pnpm.
+**From the prebuilt zip (no build tools needed):** unzip
+[`releases/code-walkthroughs-extension-0.1.0-chrome.zip`](releases/code-walkthroughs-extension-0.1.0-chrome.zip) into a
+folder you keep, then follow the steps below and choose that folder in step 2.
+
+**From source:** you need Node.js 22.18 or newer and pnpm.
 
 ```bash
 cd extension
 pnpm install
-pnpm build
+pnpm build      # or `pnpm zip` to produce the zip in extension/.output/
 ```
 
 1. Open `chrome://extensions` and turn on **Developer mode** (top right).
-2. Click **Load unpacked** and choose `extension/.output/chrome-mv3`.
+2. Click **Load unpacked** and choose `extension/.output/chrome-mv3`, or the folder you unzipped.
 3. Pin **Code Walkthroughs** to the toolbar and click it, then click **Settings**.
 4. Click **Choose folder** and pick your walkthroughs folder. This is the same folder you give the skill.
 5. Chrome may later ask for access again, for example after a restart. When it does, the toolbar list and the player
