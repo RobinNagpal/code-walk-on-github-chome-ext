@@ -9,7 +9,7 @@
 // Slides whose narration and voice are unchanged since the last run are skipped
 // (tracked in .audio-manifest.json); --force regenerates everything.
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { voiceSettings } from './config.ts';
 import { apiKey, isProvider, missingKeyMessage, PROVIDERS, synthesize, type VoiceSettings } from './tts.ts';
@@ -94,12 +94,14 @@ for (const slide of walkthrough.slides) {
   console.log(`wrote ${audio}  ${speech.durationSec}s`);
 }
 
-// Drop audio for slides that no longer exist.
+// Drop audio for slides that no longer exist, including MP3s the manifest doesn't know
+// about (a folder copied without it). The folder belongs to this walkthrough alone.
 const live = new Set(walkthrough.slides.map((s) => s.id));
 for (const id of Object.keys(manifest)) {
-  if (live.has(id)) continue;
-  rmSync(join(folder, `${id}.mp3`), { force: true });
-  delete manifest[id];
+  if (!live.has(id)) delete manifest[id];
+}
+for (const file of readdirSync(folder)) {
+  if (file.endsWith('.mp3') && !live.has(file.slice(0, -4))) rmSync(join(folder, file), { force: true });
 }
 
 save();

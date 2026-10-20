@@ -11,18 +11,18 @@ one is played, it opens each slide's file on GitHub at that commit, highlights t
 floating player.
 
 You write the content (`walkthrough.json`). The scripts in `scripts/` next to this file check it and turn the narration
-into speech. `<skill-dir>` below means the directory this SKILL.md is in. Run the scripts with `node` (22.18 or newer runs
-TypeScript directly).
+into speech. `<skill-dir>` below means the directory this SKILL.md is in. Run the scripts with `node`; version 22.18 or
+newer runs TypeScript directly. Prefix the command with `NODE_NO_WARNINGS=1` to hide Node's "experimental" notice.
 
 ## 1. Check the setup
 
 ```bash
-node <skill-dir>/scripts/config.ts get      # the walkthroughs folder
-node <skill-dir>/scripts/config.ts voice    # the voice, and whether its API key is set
+NODE_NO_WARNINGS=1 node <skill-dir>/scripts/config.ts get      # the walkthroughs folder
+NODE_NO_WARNINGS=1 node <skill-dir>/scripts/config.ts voice    # the voice, and whether its API key is set
 ```
 
 - **`get` fails:** ask the user which folder walkthroughs should be saved in (the Chrome extension reads the same
-  folder), then run `node <skill-dir>/scripts/config.ts set "<folder>"`.
+  folder), then run `NODE_NO_WARNINGS=1 node <skill-dir>/scripts/config.ts set "<folder>"`.
 - **`voice` reports a missing key:** tell the user which environment variable to set, or offer the free `edge` voice.
 - **Dependencies missing:** if a script says `msedge-tts` or `lamejs` can't be found, run `npm install --prefix <skill-dir>`.
 
@@ -48,8 +48,8 @@ They never read the `.env` of the repository being walked through.
 Gemini model", "use gpt-4o-mini-tts"), store it:
 
 ```bash
-node <skill-dir>/scripts/config.ts models                                     # what is available
-node <skill-dir>/scripts/config.ts set-voice <edge|openai|gemini> [voice|-] [model]
+NODE_NO_WARNINGS=1 node <skill-dir>/scripts/config.ts models                                     # what is available
+NODE_NO_WARNINGS=1 node <skill-dir>/scripts/config.ts set-voice <edge|openai|gemini> [voice|-] [model]
 # e.g. set-voice gemini - gemini-3.8-flash-tts   ("-" keeps the default voice)
 ```
 
@@ -67,8 +67,8 @@ You need three things. If the user didn't give them, ask once, in one question, 
 
 **Budget the words before writing.** At 165 spoken words a minute, total words = minutes × 165. Pick a slide count that
 gives each slide 90–200 words: 8–15 slides for 10 minutes, about 30 for 20 minutes. Use the slide count the user asks
-for when they give one. Per-slide budget = total ÷ slides. Write to that budget; it is much cheaper than cutting
-afterwards.
+for when they give one. Per-slide budget = total ÷ slides, so about 110 words a slide for 30 slides in 20 minutes.
+Write to that budget; first drafts tend to run 20–30% long, and cutting afterwards costs more than writing short.
 
 **Know the audience.** Unless the user says otherwise, assume the listener is new to the code and its background:
 explain the problem it solves and any outside concepts it relies on before diving in. For a long walkthrough, open
@@ -136,8 +136,8 @@ Create `<walkthroughs-folder>/<id>/walkthrough.json`. The format is in `walkthro
   - The folder name equals `id`.
   - Slide ids are `NN-short-name` (`01-overview`, `02-entry-point`), unique and hyphen-separated.
 - **`lines`:**
-  - Frame exactly what the narration talks about. That is usually 5–40 lines, or the whole function when the slide is
-    about the function.
+  - Frame exactly what the narration talks about. That is usually 5–40 lines. When the slide is about a whole function,
+    frame the whole function even if it is longer.
   - Don't start or end on a blank line.
   - Without `lines`, the file opens at the top.
   - A slide without `file` shows no code. Use that only for an introduction or a wrap-up.
@@ -170,7 +170,7 @@ Create `<walkthroughs-folder>/<id>/walkthrough.json`. The format is in `walkthro
 ## 6. Validate
 
 ```bash
-node <skill-dir>/scripts/validate.ts "<walkthroughs-folder>/<id>" --repo <repo>
+NODE_NO_WARNINGS=1 node <skill-dir>/scripts/validate.ts "<walkthroughs-folder>/<id>" --repo <repo>
 ```
 
 It checks the following:
@@ -180,7 +180,9 @@ It checks the following:
 - every range fits inside its file;
 - no range starts or ends on a blank line;
 - no narration contains text a voice reads badly;
-- no narration sentence is longer than 25 words, and the average sentence stays short;
+- no sentence in the narration or the summary is longer than 25 words, and each slide's narration averages at most
+  16 words a sentence. Each slide's line shows its average and longest sentence;
+- no common idioms appear;
 - the total length is within 10% of `targetMinutes`.
 
 Each slide prints the first and last line of its range. Use `--show` to print every line, and `--slide <id|number>` to
@@ -190,7 +192,7 @@ errors and no warnings you can fix.
 ## 7. Generate the audio
 
 ```bash
-node <skill-dir>/scripts/generate-audio.ts "<walkthroughs-folder>/<id>"
+NODE_NO_WARNINGS=1 node <skill-dir>/scripts/generate-audio.ts "<walkthroughs-folder>/<id>"
 ```
 
 - **Output:** one `<slide-id>.mp3` per slide, with `audio` and `durationSec` filled in on each slide. The voice is the
@@ -200,6 +202,8 @@ node <skill-dir>/scripts/generate-audio.ts "<walkthroughs-folder>/<id>"
 - **Speed:** about 3 seconds per slide with `edge`.
 
 If the total printed at the end is more than 10% off the target, edit the narration, then validate and generate again.
+Voices don't speak at a fixed pace (Gemini runs a few percent slower than 165 words a minute), so aim the word count
+about 3% under the target.
 
 ## 8. Report
 

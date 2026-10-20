@@ -120,12 +120,16 @@ for (const [i, slide] of walkthrough.slides.entries()) {
     if (match) warnings.push(`${at}: narration has ${what} ("${slide.narration.slice(Math.max(0, match.index - 15), match.index + 20)}")`);
   }
   const spoken = sentences(slide.narration ?? '');
-  for (const sentence of [...spoken, ...sentences(slide.summary ?? '')]) {
-    const count = wordCount(sentence);
-    if (count > MAX_SENTENCE_WORDS) warnings.push(`${at}: ${count}-word sentence; split it ("${sentence.slice(0, 60)}…")`);
+  for (const field of ['narration', 'summary'] as const) {
+    for (const sentence of sentences(slide[field] ?? '')) {
+      const count = wordCount(sentence);
+      if (count > MAX_SENTENCE_WORDS) warnings.push(`${at}: ${field} has a ${count}-word sentence; split it ("${sentence.slice(0, 60)}…")`);
+    }
   }
-  if (spoken.length && words / spoken.length > MAX_AVERAGE_SENTENCE_WORDS) {
-    warnings.push(`${at}: sentences average ${Math.round(words / spoken.length)} words; aim for under 15`);
+  const average = spoken.length ? words / spoken.length : 0;
+  const longest = Math.max(0, ...spoken.map(wordCount));
+  if (average > MAX_AVERAGE_SENTENCE_WORDS) {
+    warnings.push(`${at}: narration sentences average ${Math.round(average)} words; aim for under 15`);
   }
   for (const idiom of IDIOMS) {
     if (`${slide.narration} ${slide.summary}`.toLowerCase().includes(idiom)) warnings.push(`${at}: idiom "${idiom}"; say it plainly`);
@@ -137,7 +141,9 @@ for (const [i, slide] of walkthrough.slides.entries()) {
   const selected = !only || only === slide.id || only === String(i + 1);
   const range = slide.lines ? `#L${slide.lines.start}-L${slide.lines.end}` : '';
   if (selected) {
-    console.log(`\n${String(i + 1).padStart(2)}. ${slide.id}  (${words} words${slide.durationSec ? `, ${slide.durationSec.toFixed(0)}s` : ''})  ${slide.file ?? '(no file)'}${range}`);
+    const audio = slide.durationSec ? `, ${slide.durationSec.toFixed(0)}s` : '';
+    const style = spoken.length ? `, sentences avg ${average.toFixed(0)} / max ${longest} words` : '';
+    console.log(`\n${String(i + 1).padStart(2)}. ${slide.id}  (${words} words${audio}${style})  ${slide.file ?? '(no file)'}${range}`);
   }
   if (!slide.file) continue;
 
