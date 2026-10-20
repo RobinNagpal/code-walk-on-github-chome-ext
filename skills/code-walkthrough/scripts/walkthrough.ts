@@ -8,6 +8,10 @@ export interface LineRange {
   end: number;
 }
 
+/** CodeTour: files at one pinned commit. PRReview: the changes of a pull request. */
+export const WALKTHROUGH_TYPES = ['CodeTour', 'PRReview'] as const;
+export type WalkthroughType = (typeof WALKTHROUGH_TYPES)[number];
+
 export interface Slide {
   id: string;
   title: string;
@@ -15,12 +19,24 @@ export interface Slide {
   narration: string;
   file?: string;
   lines?: LineRange;
+  /** PRReview only: "new" (default) for added or kept lines, "old" for removed ones. */
+  side?: 'new' | 'old';
   audio?: string;
   durationSec?: number;
 }
 
+export interface PullRequest {
+  number: number;
+  title?: string;
+  baseCommit: string;
+  headCommit: string;
+}
+
 export interface Walkthrough {
   version: 1;
+  /** Missing means CodeTour. */
+  type?: WalkthroughType;
+  pullRequest?: PullRequest;
   id: string;
   title: string;
   description?: string;
@@ -51,6 +67,16 @@ export function structuralErrors(w: Walkthrough, folderName: string): string[] {
   if (!w.title) errors.push('title is required');
   if (!w.repo?.owner || !w.repo?.name) errors.push('repo.owner and repo.name are required');
   if (!SHA.test(w.repo?.commit ?? '')) errors.push('repo.commit must be a full 40-character commit SHA');
+  if (w.type !== undefined && !WALKTHROUGH_TYPES.includes(w.type)) errors.push(`type must be one of ${WALKTHROUGH_TYPES.join(', ')}`);
+  const review = w.type === 'PRReview';
+  if (review) {
+    const pr = w.pullRequest;
+    if (!pr || !Number.isInteger(pr.number)) errors.push('a PRReview needs pullRequest.number');
+    if (!SHA.test(pr?.baseCommit ?? '') || !SHA.test(pr?.headCommit ?? '')) {
+      errors.push('pullRequest.baseCommit and headCommit must be full 40-character SHAs');
+    }
+    if (pr && w.repo?.commit !== pr.headCommit) errors.push('repo.commit must equal pullRequest.headCommit');
+  }
   if (!Array.isArray(w.slides) || w.slides.length === 0) errors.push('slides must be a non-empty array');
 
   const ids = new Set<string>();
@@ -63,6 +89,9 @@ export function structuralErrors(w: Walkthrough, folderName: string): string[] {
     if (!s.summary) errors.push(`${at}.summary is required`);
     if (!s.narration) errors.push(`${at}.narration is required`);
     if (s.lines && !s.file) errors.push(`${at}.lines given without file`);
+    if (s.side !== undefined && (!review || !['new', 'old'].includes(s.side))) {
+      errors.push(`${at}.side must be "new" or "old", and only in a PRReview`);
+    }
     if (s.lines) {
       const { start, end } = s.lines;
       if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start) {

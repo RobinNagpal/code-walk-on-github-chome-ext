@@ -1,14 +1,18 @@
 ---
 name: code-walkthrough
-description: Generate an audio code walkthrough (walkthrough.json plus one MP3 per slide) for a git repository, pinned to a commit, for playback on GitHub with the Code Walkthroughs Chrome extension. Use when the user asks to create, generate, record, or update a code walkthrough, code tour, or audio explanation of code, or to set the code walkthroughs folder or voice.
+description: Generate an audio code walkthrough (walkthrough.json plus one MP3 per slide) for playback on GitHub with the Code Walkthroughs Chrome extension. Two types are supported. A code tour explains a repository pinned to a commit. A PR review walks through a pull request's changes in its Files changed tab. Use when the user asks to create, generate, record, or update a code walkthrough, code tour, PR walkthrough, PR review walkthrough, or audio explanation of code or of a pull request (for example when they give a GitHub pull request URL), or to set the code walkthroughs folder or voice.
 ---
 
 # Code walkthrough
 
-A walkthrough is a folder of slides. Each slide points at a file and a line range at one fixed commit, has a short
-on-screen summary, and has narration that becomes an MP3. The Chrome extension lists the walkthroughs in the folder. When
-one is played, it opens each slide's file on GitHub at that commit, highlights the lines, and plays the audio in a
-floating player.
+A walkthrough is a folder of slides. Each slide points at a file and a line range, has a short on-screen summary, and
+has narration that becomes an MP3. The Chrome extension lists the walkthroughs in the folder and plays them in a
+floating player on GitHub. The `type` field says what a walkthrough shows:
+
+| `type` | Use it for | The extension shows each slide |
+| --- | --- | --- |
+| `CodeTour` (default) | Explaining code as it is at one commit | in GitHub's file view at that commit, lines highlighted |
+| `PRReview` | Reviewing a pull request; the user gives a PR URL or number | in the PR's Files changed tab, whitespace changes hidden, in unified or split view (the viewer picks), changed lines highlighted |
 
 You write the content (`walkthrough.json`). The scripts in `scripts/` next to this file check it and turn the narration
 into speech. `<skill-dir>` below means the directory this SKILL.md is in. Run the scripts with `node`; version 22.18 or
@@ -61,9 +65,13 @@ If the user only asked to set the folder or the voice, stop here.
 
 You need three things. If the user didn't give them, ask once, in one question, for whatever is missing:
 
-- **What to cover:** a feature, a folder, a flow, a pull request.
-- **Length in minutes:** default 10.
+- **What to cover:** a feature, a folder, a flow, or a pull request. A pull request URL or number means a `PRReview`;
+  follow section 3b instead of section 3.
+- **Length in minutes:** default 10 for a code tour. For a PR review, size it to the change: about 2–3 minutes for a
+  small PR (under 100 changed lines), plus about 1 minute per further 75 changed lines, up to 15 minutes unless the user
+  asks for more.
 - **Name:** derive a short hyphen-separated id from the topic (for example `auth-token-refresh`) unless the user gave one.
+  For a PR review use `<repo>-pr-<number>-<short-title>`, for example `dodao-ui-pr-1613-seo-playground`.
 
 **Budget the words before writing.** At 165 spoken words a minute, total words = minutes × 165. Pick a slide count that
 gives each slide 90–200 words: 8–15 slides for 10 minutes, about 30 for 20 minutes. Use the slide count the user asks
@@ -92,6 +100,45 @@ If the commit isn't on GitHub, tell the user the links will 404 until it is push
 (`git -C <repo> rev-parse @{upstream}`) instead. Read files as they are at the pinned commit
 (`git -C <repo> show <sha>:<path>`), not from a working tree that may have changed.
 
+## 3b. PR reviews: get the pull request
+
+For a `PRReview`, the slides follow the pull request's diff instead of a pinned tree.
+
+```bash
+gh pr view <pr-url> --json number,title,body,headRefOid,baseRefName,files,url
+```
+
+Clone the repository to a temporary directory, or use the current one if it is the same repository. Fetch both sides
+and find the merge base, which GitHub diffs against:
+
+```bash
+git -C <repo> fetch origin pull/<number>/head <baseRefName>
+base=$(git -C <repo> merge-base FETCH_HEAD origin/<baseRefName>)   # or merge-base <headRefOid> origin/<baseRefName>
+git -C <repo> diff -w --stat $base <headRefOid>                    # what changed, whitespace ignored
+git -C <repo> diff -w $base <headRefOid> -- <file>                 # the hunks GitHub will show
+```
+
+Read the whole diff, and read enough of the surrounding code at the head to understand it. Also read the PR
+description and any linked issue.
+
+Rules for a PR review:
+
+- **Header:** set `"type": "PRReview"`, `"pullRequest": { "number", "title", "baseCommit": <merge base>,
+  "headCommit": <headRefOid> }`, and `repo.commit` = `headCommit`.
+- **Lines:** each slide's `lines` must sit inside one hunk of the whitespace-ignored diff, because GitHub folds
+  everything else away. Use `"side": "new"` (the default) for added or kept code, numbered as in the head. Use
+  `"side": "old"` for removed code, numbered as in the base.
+- **No-file slides:** a slide without `file` shows the top of the Files changed tab, which suits an overview slide.
+- **Following the PR:** the extension always opens the PR's current Files changed tab. If the PR gets new commits, line
+  numbers can move, so regenerate the walkthrough.
+- **The story:** a reviewer wants it in this order:
+  1. What the PR does, and why (one slide).
+  2. The changes, in the order that makes the design clear. That is usually the core change first, then the code that
+     calls it, then tests and configuration. It is not necessarily the file order.
+  3. For each change: what it does, why, and what to check. Point out risks, edge cases, missing tests, and anything
+     surprising. Don't just read the diff out loud.
+  4. A short wrap-up of what to look at most carefully.
+
 ## 4. Read the code, then plan the story
 
 Read every file you will talk about. Plan the walkthrough as a story a new engineer can follow:
@@ -113,6 +160,7 @@ Create `<walkthroughs-folder>/<id>/walkthrough.json`. The format is in `walkthro
 ```json
 {
   "version": 1,
+  "type": "CodeTour",
   "id": "auth-token-refresh",
   "title": "How access tokens are refreshed",
   "description": "From the 401 response to the retried request, in the API client.",

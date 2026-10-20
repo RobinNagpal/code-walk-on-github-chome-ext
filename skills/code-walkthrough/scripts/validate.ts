@@ -8,11 +8,13 @@
 // --slide limits the output to one slide.
 //
 // File contents come from the local clone (`git cat-file`) when the commit is in
-// it, otherwise from raw.githubusercontent.com.
+// it, otherwise from raw.githubusercontent.com. A PRReview also checks that every
+// range is visible in the pull request's whitespace-ignored diff, which needs both
+// the base and head commits in the local clone.
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
-import { readWalkthrough, structuralErrors, wordCount, type Walkthrough } from './walkthrough.ts';
+import { readWalkthrough, structuralErrors, wordCount, type LineRange } from './walkthrough.ts';
 
 const WORDS_PER_MINUTE = 165;
 const LENGTH_TOLERANCE = 0.1;
@@ -69,40 +71,75 @@ const walkthrough = readWalkthrough(folder);
 const errors = structuralErrors(walkthrough, basename(folder));
 const warnings: string[] = [];
 
-const hasLocalCommit = (() => {
+const review = walkthrough.type === 'PRReview';
+const base = walkthrough.pullRequest?.baseCommit;
+
+function hasCommit(commit: string | undefined): boolean {
+  if (!commit) return false;
   try {
-    execFileSync('git', ['-C', repoPath, 'cat-file', '-e', `${walkthrough.repo.commit}^{commit}`], { stdio: 'ignore' });
+    execFileSync('git', ['-C', repoPath, 'cat-file', '-e', `${commit}^{commit}`], { stdio: 'ignore' });
     return true;
   } catch {
     return false;
   }
-})();
+}
+
+const hasLocalCommit = hasCommit(walkthrough.repo.commit) && (!review || hasCommit(base));
+if (review && !hasLocalCommit) {
+  console.error(
+    `A PR review is checked against the diff, which needs both commits in a local clone. In the clone, run\n` +
+      `  git fetch origin pull/${walkthrough.pullRequest?.number}/head ${base ?? '<base>'}\n` +
+      `and pass --repo <clone>.`,
+  );
+  process.exit(1);
+}
 console.log(
   hasLocalCommit
     ? `Reading files from the local clone at ${resolve(repoPath)}`
     : `Commit not found in ${resolve(repoPath)}; reading files from GitHub (pass --repo <clone> to read locally)`,
 );
 
-async function fileAtCommit(w: Walkthrough, file: string): Promise<string | undefined> {
+function git(args: string[]): string {
+  return execFileSync('git', ['-C', repoPath, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 });
+}
+
+async function fileAtCommit(commit: string, file: string): Promise<string | undefined> {
   if (hasLocalCommit) {
     try {
-      return execFileSync('git', ['-C', repoPath, 'cat-file', '-p', `${w.repo.commit}:${file}`], {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-        maxBuffer: 64 * 1024 * 1024,
-      });
+      return git(['cat-file', '-p', `${commit}:${file}`]);
     } catch {
       return undefined;
     }
   }
-  const { owner, name, commit } = w.repo;
+  const { owner, name } = walkthrough.repo;
   const res = await fetch(`https://raw.githubusercontent.com/${owner}/${name}/${commit}/${file}`);
   if (res.ok) return res.text();
   if (res.status !== 404) throw new Error(`GitHub returned ${res.status} for ${file}`);
   return undefined;
 }
 
+type Hunks = Record<'old' | 'new', LineRange[]>;
+
+/**
+ * The line ranges GitHub shows for a file in the PR's Files changed tab with whitespace
+ * hidden (?w=1): the hunks of `git diff -w` between the merge base and the head, with
+ * three lines of context. Lines outside them are folded away and can't be highlighted.
+ */
+function diffHunks(file: string): Hunks {
+  const hunks: Hunks = { old: [], new: [] };
+  const diff = git(['diff', '-w', '-U3', '--no-color', '--no-ext-diff', base!, walkthrough.repo.commit, '--', file]);
+  for (const match of diff.matchAll(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/gm)) {
+    const [oldStart, oldCount, newStart, newCount] = [match[1], match[2] ?? '1', match[3], match[4] ?? '1'].map(Number);
+    if (oldCount) hunks.old.push({ start: oldStart, end: oldStart + oldCount - 1 });
+    if (newCount) hunks.new.push({ start: newStart, end: newStart + newCount - 1 });
+  }
+  return hunks;
+}
+
+const describe = (ranges: LineRange[]) => ranges.map((r) => `${r.start}-${r.end}`).join(', ') || 'none';
+
 const cache = new Map<string, Promise<string | undefined>>();
+const hunkCache = new Map<string, Hunks>();
 let totalWords = 0;
 let totalSeconds = 0;
 let withAudio = 0;
@@ -139,7 +176,9 @@ for (const [i, slide] of walkthrough.slides.entries()) {
   }
 
   const selected = !only || only === slide.id || only === String(i + 1);
-  const range = slide.lines ? `#L${slide.lines.start}-L${slide.lines.end}` : '';
+  const side = slide.side ?? 'new';
+  const letter = review ? (side === 'new' ? 'R' : 'L') : 'L';
+  const range = slide.lines ? `#${letter}${slide.lines.start}-${letter}${slide.lines.end}` : '';
   if (selected) {
     const audio = slide.durationSec ? `, ${slide.durationSec.toFixed(0)}s` : '';
     const style = spoken.length ? `, sentences avg ${average.toFixed(0)} / max ${longest} words` : '';
@@ -147,11 +186,26 @@ for (const [i, slide] of walkthrough.slides.entries()) {
   }
   if (!slide.file) continue;
 
-  if (!cache.has(slide.file)) cache.set(slide.file, fileAtCommit(walkthrough, slide.file));
-  const content = await cache.get(slide.file);
+  // A review's removed lines exist only in the base; everything else is read at the head.
+  const commit = review && side === 'old' ? base! : walkthrough.repo.commit;
+  const key = `${commit}:${slide.file}`;
+  if (!cache.has(key)) cache.set(key, fileAtCommit(commit, slide.file));
+  const content = await cache.get(key);
   if (content === undefined) {
-    errors.push(`${at}: file "${slide.file}" not found at commit ${walkthrough.repo.commit}`);
+    errors.push(`${at}: file "${slide.file}" not found at commit ${commit}`);
     continue;
+  }
+  if (review) {
+    if (!hunkCache.has(slide.file)) hunkCache.set(slide.file, diffHunks(slide.file));
+    const hunks = hunkCache.get(slide.file)![side];
+    if (hunks.length === 0) {
+      errors.push(`${at}: "${slide.file}" has no ${side}-side changes in the PR diff (whitespace ignored)`);
+    } else if (slide.lines && !hunks.some((h) => h.start <= slide.lines!.start && slide.lines!.end <= h.end)) {
+      errors.push(
+        `${at}: ${side}-side lines ${slide.lines.start}-${slide.lines.end} are not all shown in the PR diff; ` +
+          `keep the range inside one of: ${describe(hunks)}`,
+      );
+    }
   }
   if (!slide.lines) continue;
   const lines = content.replace(/\n$/, '').split('\n');

@@ -1,11 +1,13 @@
 // Messages between the extension's parts. Runtime messages carry a `target` because
 // every extension page (popup, options, offscreen) hears every runtime message.
 import { browser } from 'wxt/browser';
-import type { LineRange, Walkthrough } from './walkthrough';
+import type { DiffView, FocusTarget, Walkthrough } from './walkthrough';
 
 export interface Settings {
   speed: number;
   autoplay: boolean;
+  /** Layout of pull request diffs in PR reviews. */
+  diffView: DiffView;
 }
 
 export interface PlayerState {
@@ -65,7 +67,7 @@ export type OffscreenReply = { ok: true } | { ok: false; error: string };
 export type TabMessage =
   | { type: 'view'; view: PlayerView }
   | { type: 'progress'; progress: Progress }
-  | { type: 'focus'; lines?: LineRange }
+  | { type: 'focus'; target: FocusTarget }
   | { type: 'clear' }
   | { type: 'closed' };
 
@@ -74,7 +76,7 @@ export interface PageReadyReply {
   view?: PlayerView;
   /** True when the page shows the current slide's file. */
   onSlide?: boolean;
-  focus?: LineRange;
+  focus?: FocusTarget;
 }
 
 export function sendToBackground<T = unknown>(message: BackgroundMessage): Promise<T> {

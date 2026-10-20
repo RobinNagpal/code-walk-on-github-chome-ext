@@ -9,7 +9,7 @@ import { createShadowRootUi, defineContentScript, type ShadowRootContentScriptUi
 import { Player } from '@/components/Player';
 import { clearHighlight, focusLines } from '@/lib/highlight';
 import { sendToBackground, type PageReadyReply, type PlayerView, type Progress, type TabMessage } from '@/lib/messages';
-import { withoutHash, type LineRange } from '@/lib/walkthrough';
+import { focusHash, samePage, type FocusTarget } from '@/lib/walkthrough';
 
 // GitHub renders a soft navigation shortly after the URL changes; wait before looking for lines.
 const SOFT_NAVIGATION_SETTLE_MS = 400;
@@ -43,12 +43,12 @@ function App() {
 }
 
 /** Shows the lines, and points the URL at them so GitHub's own highlight matches ours. */
-function showLines(lines: LineRange | undefined): void {
-  if (lines) {
-    const hash = `#L${lines.start}-L${lines.end}`;
-    if (location.hash !== hash) location.replace(hash);
-  }
-  focusLines(lines);
+function showLines(target: FocusTarget): void {
+  const hash = focusHash(target);
+  if (hash && location.hash !== hash) location.replace(hash);
+  // A slide with no lines (a PR overview) drops the previous slide's anchor, so GitHub's highlight goes too.
+  else if (!hash && location.hash) history.replaceState(history.state, '', location.pathname + location.search);
+  focusLines(target);
 }
 
 export default defineContentScript({
@@ -106,7 +106,7 @@ export default defineContentScript({
 
     browser.runtime.onMessage.addListener((message: TabMessage) => {
       if (message.type === 'view') setView(message.view);
-      else if (message.type === 'focus') showLines(message.lines);
+      else if (message.type === 'focus') showLines(message.target);
       else if (message.type === 'clear') clearHighlight();
       else if (message.type === 'closed') unmount();
     });
@@ -114,7 +114,7 @@ export default defineContentScript({
     // GitHub moves between files without reloading. Only a different file matters:
     // hash changes (clicking a line number, or showLines above) must not pull the view back.
     ctx.addEventListener(window, 'wxt:locationchange', ({ newUrl, oldUrl }) => {
-      if (withoutHash(newUrl.href) === withoutHash(oldUrl.href)) return;
+      if (samePage(newUrl.href, oldUrl.href)) return;
       clearHighlight();
       ctx.setTimeout(syncWithBackground, SOFT_NAVIGATION_SETTLE_MS);
     });

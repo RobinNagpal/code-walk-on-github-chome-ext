@@ -6,6 +6,22 @@
   "required": ["version", "id", "title", "repo", "slides"],
   "properties": {
     "version": { "const": 1 },
+    "type": {
+      "enum": ["CodeTour", "PRReview"],
+      "default": "CodeTour",
+      "description": "CodeTour: files at one pinned commit, shown in GitHub's file view. PRReview: the changes of a pull request, shown in its Files changed tab with whitespace changes hidden."
+    },
+    "pullRequest": {
+      "type": "object",
+      "description": "Required for a PRReview.",
+      "required": ["number", "baseCommit", "headCommit"],
+      "properties": {
+        "number": { "type": "integer" },
+        "title": { "type": "string" },
+        "baseCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$", "description": "The merge base of the PR's base branch and its head." },
+        "headCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$", "description": "The PR head the walkthrough was written for; equals repo.commit." }
+      }
+    },
     "id": {
       "type": "string",
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
@@ -52,6 +68,11 @@
               "start": { "type": "integer", "minimum": 1 },
               "end": { "type": "integer", "minimum": 1 }
             }
+          },
+          "side": {
+            "enum": ["new", "old"],
+            "default": "new",
+            "description": "PRReview only. \"new\": lines numbered as in the PR head (added or unchanged code). \"old\": lines numbered as in the base (removed code)."
           },
           "audio": { "type": "string", "description": "MP3 file name in the same folder; written by generate-audio.ts." },
           "durationSec": { "type": "number", "description": "Audio length at 1x; written by generate-audio.ts." }

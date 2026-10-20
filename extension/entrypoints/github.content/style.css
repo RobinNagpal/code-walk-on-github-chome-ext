@@ -222,6 +222,19 @@ select {
   color: var(--accent-fg);
 }
 
+.review-options {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 10px;
+  font-size: 12px;
+}
+
+.muted {
+  color: var(--muted);
+  margin-left: auto;
+}
+
 .notice {
   margin: 0 12px 10px;
   padding: 6px 8px;

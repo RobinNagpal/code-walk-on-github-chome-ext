@@ -16,9 +16,19 @@ Audio code walkthroughs that play on top of GitHub. A Claude skill writes them; 
 One folder per walkthrough, named with its hyphen-separated id. Inside: `walkthrough.json` and one MP3 per slide
 (`<slide-id>.mp3`). The full schema is `skills/code-walkthrough/walkthrough.schema.json`.
 
-- `repo.commit` is a full SHA. Every link the extension opens is `https://github.com/<owner>/<repo>/blob/<sha>/<file>#L<start>-L<end>`,
-  so a walkthrough keeps pointing at the code it describes after the branch moves on.
-- Markdown files are opened with `?plain=1`, because GitHub's rendered view has no line anchors.
+- `type` is `CodeTour` (the default) or `PRReview`.
+- **CodeTour:** `repo.commit` is a full SHA. Every link the extension opens is
+  `https://github.com/<owner>/<repo>/blob/<sha>/<file>#L<start>-L<end>`, so a walkthrough keeps pointing at the code it
+  describes after the branch moves on. Markdown files are opened with `?plain=1`, because GitHub's rendered view has no
+  line anchors.
+- **PRReview:** `pullRequest` holds `number`, `baseCommit` (the merge base) and `headCommit`, and `repo.commit` equals
+  `headCommit`. Each slide opens
+  `https://github.com/<owner>/<repo>/pull/<n>/files?w=1&diff=<unified|split>#diff-<sha256(path)>R<start>-R<end>`.
+  - `w=1` hides whitespace changes.
+  - The diff layout is a player setting.
+  - `R` lines are numbered as in the head; slides with `"side": "old"` use `L` lines, numbered as in the base.
+  - GitHub can't pin a PR's Files changed tab to a commit range (`/files/<base>..<head>` returns 404), so a PR review
+    follows the PR's current changes. `validate.ts` checks every range against the hunks of `git diff -w <base> <head>`.
 - Each slide has `title`, `summary` (the on-screen explanation), `narration` (what is spoken), optional `file` +
   `lines`, and `audio` + `durationSec` (filled in by the audio script).
 - A slide without an MP3 still plays: the extension speaks its narration with Chrome's built-in `chrome.tts` voice.
@@ -85,6 +95,22 @@ slide.
    script asks for the state and focuses the lines itself.
 3. It tells the offscreen document to load `<slide-id>.mp3` and play it if `playing` is true. A slide with no audio is
    spoken with `chrome.tts` instead.
+
+### Highlighting in a pull request diff
+
+In the Files changed tab, every line-number cell has the id `diff-<sha256(path)>R<n>` (new side) or `…L<n>` (old side).
+That is the same in unified and split view.
+
+- **Split view:** the rule highlights the number cell and the code cell that follows it, so only the discussed side is
+  marked.
+- **Unified view:** it highlights the whole row.
+
+The rules are scoped by the table's `file-diff-split` class, so no detection is needed. URLs are compared with their
+query parameters sorted (GitHub rewrites `?w=1&diff=split` as `?diff=split&w=1`). That way, slides within one PR move
+the highlight without reloading the page, and switching Unified/Split reloads it in the new layout.
+
+GitHub's newer "Files changed" layout for logged-in users may use different markup. There, the extension relies on the
+URL anchor, which GitHub scrolls to and highlights itself.
 
 ### Highlighting and scrolling
 

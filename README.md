@@ -5,7 +5,13 @@ the **Code Walkthroughs Chrome extension** plays them. While a slide's narration
 file on GitHub, scrolls to the right lines and highlights them. Then it moves on to the next slide, which can be
 another part of the same file, another function, or another file.
 
-Every walkthrough is pinned to a commit, so its links keep pointing at the code it describes after the branch moves on.
+There are two types of walkthrough (`type` in `walkthrough.json`):
+
+- **`CodeTour`** explains code as it is at one commit. Its links keep pointing at the code it describes after the
+  branch moves on.
+- **`PRReview`** walks a reviewer through a pull request. It plays on the PR's **Files changed** tab, with whitespace
+  changes hidden, and highlights the changed lines being discussed. The player has a **Unified | Split** switch for
+  the diff layout.
 
 ```
 <walkthroughs folder>/
@@ -19,7 +25,7 @@ Every walkthrough is pinned to a commit, so its links keep pointing at the code 
 ## Install the Chrome extension
 
 **From the prebuilt zip (no build tools needed):** unzip
-[`releases/code-walkthroughs-extension-0.1.0-chrome.zip`](releases/code-walkthroughs-extension-0.1.0-chrome.zip) into a
+[`releases/code-walkthroughs-extension-0.2.0-chrome.zip`](releases/code-walkthroughs-extension-0.2.0-chrome.zip) into a
 folder you keep, then follow the steps below and choose that folder in step 2.
 
 **From source:** you need Node.js 22.18 or newer and pnpm.
@@ -54,6 +60,7 @@ its header; it remembers where you put it.
 | **Manual** | Stop at the end of each slide; pick the next one yourself. |
 | File · lines | Bring the slide's code back into view if you scrolled away. |
 | All slides | The full list; click any slide to jump there. |
+| Unified / Split | PR reviews only: show the diff in one column or side by side. The page reloads in that layout and the walkthrough carries on. |
 | – / × | Minimise to a small pill, or end the walkthrough. |
 
 The narration keeps playing while GitHub loads the next file. If a slide has no MP3, the extension reads its narration
@@ -128,6 +135,15 @@ Claude then does the following:
 4. Generates the MP3s.
 
 When it finishes, open the extension's list and start the walkthrough.
+
+For a pull request review, give Claude the PR:
+
+> Create a review walkthrough for https://github.com/RobinNagpal/dodao-ui/pull/1613
+
+Claude reads the PR's description and its whitespace-ignored diff, and then writes a `PRReview` walkthrough. It covers
+what the PR does, then each important change in a sensible order, and ends with risks and things to check.
+`validate.ts` makes sure every highlighted range is inside a part of the diff that GitHub actually shows. The extension
+always opens the PR's current Files changed tab, so regenerate the walkthrough if the PR gets new commits.
 
 Every walkthrough uses plain, simple English, so that people who don't speak English as a first language can follow
 it. That means short sentences, common words, no idioms, and each technical term explained the first time it is used.

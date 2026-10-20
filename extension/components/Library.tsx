@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'preact/hooks';
 import { browser } from 'wxt/browser';
 import { chooseFolder, folderAccess, getFolder, readLibrary, type Access, type Library as LibraryData } from '@/lib/folder';
 import { sendToBackground } from '@/lib/messages';
-import { formatTime, totalDuration } from '@/lib/walkthrough';
+import { formatTime, totalDuration, walkthroughType, WalkthroughType } from '@/lib/walkthrough';
 
 type Mode = 'popup' | 'options';
 
@@ -124,8 +124,10 @@ export function Library({ mode }: { mode: Mode }) {
               <div class="title">{walkthrough.title}</div>
               {walkthrough.description && <div class="description">{walkthrough.description}</div>}
               <div class="meta">
-                {walkthrough.repo.owner}/{walkthrough.repo.name} @ {walkthrough.repo.commit.slice(0, 7)} · {walkthrough.slides.length}{' '}
-                slides · {formatTime(totalDuration(walkthrough))}
+                {walkthroughType(walkthrough) === WalkthroughType.PRReview && walkthrough.pullRequest
+                  ? `PR review · ${walkthrough.repo.owner}/${walkthrough.repo.name} #${walkthrough.pullRequest.number}`
+                  : `Code tour · ${walkthrough.repo.owner}/${walkthrough.repo.name} @ ${walkthrough.repo.commit.slice(0, 7)}`}{' '}
+                · {walkthrough.slides.length} slides · {formatTime(totalDuration(walkthrough))}
               </div>
             </div>
             <button

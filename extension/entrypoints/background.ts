@@ -16,7 +16,7 @@ import type {
   TabMessage,
 } from '@/lib/messages';
 import { loadSettings, saveSettings } from '@/lib/settings';
-import { slideUrl, withoutHash, type Walkthrough } from '@/lib/walkthrough';
+import { samePage, slideTarget, walkthroughType, WalkthroughType, type SlideTarget, type Walkthrough } from '@/lib/walkthrough';
 
 const STATE_KEY = 'player';
 // The service worker is stopped when idle (for example during a long pause), so the
@@ -210,24 +210,29 @@ export default defineBackground(() => {
 
   // ── Navigation ─────────────────────────────────────────────────────────────
 
+  function currentTarget(): Promise<SlideTarget | undefined> {
+    if (!state || !settings) return Promise.resolve(undefined);
+    return slideTarget(state.walkthrough, state.walkthrough.slides[state.slideIndex], settings.diffView);
+  }
+
   async function showSlide(): Promise<void> {
     if (!state) return;
-    const slide = state.walkthrough.slides[state.slideIndex];
-    const url = slideUrl(state.walkthrough, slide);
-    if (!url) {
+    const target = await currentTarget();
+    if (!target) {
       // An introduction or wrap-up: stay on the page, drop the previous slide's highlight.
       toTab({ type: 'clear' }).catch(() => {});
       return;
     }
+    const { url, focus } = target;
     const tab = await browser.tabs.get(state.tabId).catch(() => undefined);
     if (!tab) {
       const created = await browser.tabs.create({ url });
       state.tabId = created.id!;
       await persist();
-    } else if (withoutHash(tab.pendingUrl || tab.url || '') === withoutHash(url)) {
+    } else if (samePage(tab.pendingUrl || tab.url || '', url)) {
       // Already there, or already loading it (a tab just opened by start()). A page
       // without the content script (opened before the extension loaded) gets reloaded.
-      if (!tab.pendingUrl) await toTab({ type: 'focus', lines: slide.lines }).catch(() => browser.tabs.update(tab.id!, { url }));
+      if (!tab.pendingUrl) await toTab({ type: 'focus', target: focus }).catch(() => browser.tabs.update(tab.id!, { url }));
     } else {
       await browser.tabs.update(state.tabId, { url });
     }
@@ -248,7 +253,8 @@ export default defineBackground(() => {
   async function start(folder: string, walkthrough: Walkthrough): Promise<void> {
     await stopAudio();
     const { owner, name, commit } = walkthrough.repo;
-    const first = slideUrl(walkthrough, walkthrough.slides[0]) ?? `https://github.com/${owner}/${name}/tree/${commit}`;
+    const first =
+      (await slideTarget(walkthrough, walkthrough.slides[0], settings!.diffView))?.url ?? `https://github.com/${owner}/${name}/tree/${commit}`;
     const [active] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
     let tabId: number;
     if (active?.id !== undefined && active.url?.startsWith('https://github.com/')) {
@@ -310,6 +316,8 @@ export default defineBackground(() => {
     await saveSettings(settings);
     if (patch.speed !== undefined) await toOffscreen({ target: 'offscreen', type: 'speed', speed: patch.speed }).catch(() => {});
     broadcast();
+    // Switching between unified and split reloads the Files changed tab in the new layout.
+    if (patch.diffView !== undefined && state && walkthroughType(state.walkthrough) === WalkthroughType.PRReview) await showSlide();
   }
 
   // ── Messages ───────────────────────────────────────────────────────────────
@@ -322,11 +330,10 @@ export default defineBackground(() => {
         return { ok: true };
       case 'pageReady': {
         if (!state || tabId !== state.tabId) return {} satisfies PageReadyReply;
-        const slide = state.walkthrough.slides[state.slideIndex];
-        const url = slideUrl(state.walkthrough, slide);
+        const target = await currentTarget();
         const tab = await browser.tabs.get(tabId);
-        const onSlide = url !== undefined && tab.url !== undefined && withoutHash(tab.url) === withoutHash(url);
-        return { view: view(), onSlide, focus: onSlide ? slide.lines : undefined } satisfies PageReadyReply;
+        const onSlide = target !== undefined && tab.url !== undefined && samePage(tab.url, target.url);
+        return { view: view(), onSlide, focus: onSlide ? target.focus : undefined } satisfies PageReadyReply;
       }
       case 'command':
         await command(message.command);

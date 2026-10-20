@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { sendToBackground, type PlayerCommand, type PlayerView, type Progress } from '@/lib/messages';
 import { loadLayout, saveLayout, type Layout, type Position } from '@/lib/settings';
-import { formatTime, SPEEDS, totalDuration } from '@/lib/walkthrough';
+import { formatTime, SPEEDS, totalDuration, walkthroughType, WalkthroughType } from '@/lib/walkthrough';
 import { Icon } from './icons';
 
 const WIDTH = 360;
@@ -93,7 +93,9 @@ export function Player({ view, progress }: { view: PlayerView; progress: Progres
   );
   const percent = progress.duration ? Math.min(100, (progress.currentTime / progress.duration) * 100) : 0;
   // The file name and lines matter most; the full path is in the tooltip.
-  const location = slide.file && `${slide.file.split('/').pop()}${slide.lines ? ` · lines ${slide.lines.start}–${slide.lines.end}` : ''}`;
+  const isReview = walkthroughType(walkthrough) === WalkthroughType.PRReview;
+  const lineLabel = isReview ? (slide.side === 'old' ? 'removed lines' : 'new lines') : 'lines';
+  const location = slide.file && `${slide.file.split('/').pop()}${slide.lines ? ` · ${lineLabel} ${slide.lines.start}–${slide.lines.end}` : ''}`;
 
   if (minimized) {
     return (
@@ -120,6 +122,7 @@ export function Player({ view, progress }: { view: PlayerView; progress: Progres
             {walkthrough.title}
           </div>
           <div class="meta">
+            {isReview && walkthrough.pullRequest ? `PR #${walkthrough.pullRequest.number} review · ` : ''}
             Slide {slideIndex + 1} of {count} · {formatTime(totalDuration(walkthrough))} total
           </div>
         </div>
@@ -187,6 +190,24 @@ export function Player({ view, progress }: { view: PlayerView; progress: Progres
           </button>
         </div>
       </div>
+
+      {isReview && (
+        <div class="review-options">
+          <span>Diff view</span>
+          <div class="mode" role="group" aria-label="Diff view">
+            {(['unified', 'split'] as const).map((diffView) => (
+              <button
+                class={settings.diffView === diffView ? 'on' : ''}
+                title={diffView === 'unified' ? 'Show changes in one column' : 'Show old and new code side by side'}
+                onClick={() => sendToBackground({ target: 'background', type: 'settings', settings: { diffView } })}
+              >
+                {diffView === 'unified' ? 'Unified' : 'Split'}
+              </button>
+            ))}
+          </div>
+          <span class="muted">Whitespace changes hidden</span>
+        </div>
+      )}
 
       {state.notice && (
         <div class="notice">

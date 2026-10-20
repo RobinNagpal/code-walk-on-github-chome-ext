@@ -4,7 +4,7 @@ import type { Settings } from './messages';
 const SETTINGS_KEY = 'settings';
 const LAYOUT_KEY = 'playerLayout';
 
-export const DEFAULT_SETTINGS: Settings = { speed: 1, autoplay: true };
+export const DEFAULT_SETTINGS: Settings = { speed: 1, autoplay: true, diffView: 'unified' };
 
 export interface Position {
   x: number;
