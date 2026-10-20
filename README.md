@@ -129,6 +129,10 @@ Claude then does the following:
 
 When it finishes, open the extension's list and start the walkthrough.
 
+Every walkthrough uses plain, simple English, so that people who don't speak English as a first language can follow
+it. That means short sentences, common words, no idioms, and each technical term explained the first time it is used.
+`validate.ts` flags long sentences and common idioms.
+
 ## Repository layout
 
 ```

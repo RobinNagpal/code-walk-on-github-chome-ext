@@ -142,7 +142,16 @@ Create `<walkthroughs-folder>/<id>/walkthrough.json`. The format is in `walkthro
   - Without `lines`, the file opens at the top.
   - A slide without `file` shows no code. Use that only for an introduction or a wrap-up.
 - **Markdown files** work too: the extension opens them in GitHub's plain view, so line numbers apply.
-- **`summary`** is what the viewer reads: 1–3 sentences giving the slide's key point.
+- **Plain language, always.** Many listeners do not speak English as a first language. Write the narration and the
+  summary so they can follow it:
+  - Use short sentences. Aim for under 15 words, and never go over 25.
+  - Use common, everyday words. Say "use", not "utilise", and "check", not "ascertain".
+  - Put one idea in each sentence, and use the active voice: "The loop picks a push", not "A push is picked by the loop".
+  - Don't use idioms, metaphors, jokes, wordplay or slang ("under the hood", "in a nutshell", "the heavy lifting",
+    "pays for itself").
+  - Explain each technical term in a few simple words the first time you use it.
+  - Be direct. Say what the code does and why, with no storytelling, no build-up and no filler.
+- **`summary`** is what the viewer reads: 1–3 short, plain sentences giving the slide's key point.
 - **`narration`** is what the viewer hears, so write for the ear:
   - **Names, as a person would say them:**
     - `jaw_paths.py` → "the jaw paths module"
@@ -171,6 +180,7 @@ It checks the following:
 - every range fits inside its file;
 - no range starts or ends on a blank line;
 - no narration contains text a voice reads badly;
+- no narration sentence is longer than 25 words, and the average sentence stays short;
 - the total length is within 10% of `targetMinutes`.
 
 Each slide prints the first and last line of its range. Use `--show` to print every line, and `--slide <id|number>` to

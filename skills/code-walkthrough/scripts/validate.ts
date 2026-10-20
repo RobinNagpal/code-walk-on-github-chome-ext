@@ -28,6 +28,26 @@ const UNSPEAKABLE: [RegExp, string][] = [
   [/\w\/\w/, 'path or slash'],
 ];
 
+// Plain language: listeners may not have English as a first language.
+const MAX_SENTENCE_WORDS = 25;
+const MAX_AVERAGE_SENTENCE_WORDS = 16;
+const IDIOMS = [
+  'under the hood',
+  'in a nutshell',
+  'heavy lifting',
+  'pays for itself',
+  'at the end of the day',
+  'bottom line',
+  'the whole of',
+  'boils down to',
+  'on the fly',
+  'out of the box',
+];
+
+function sentences(text: string): string[] {
+  return text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+}
+
 const args = process.argv.slice(2);
 const VALUE_OPTIONS = ['--repo', '--slide'];
 const option = (name: string): string | undefined => {
@@ -98,6 +118,17 @@ for (const [i, slide] of walkthrough.slides.entries()) {
   for (const [pattern, what] of UNSPEAKABLE) {
     const match = pattern.exec(slide.narration ?? '');
     if (match) warnings.push(`${at}: narration has ${what} ("${slide.narration.slice(Math.max(0, match.index - 15), match.index + 20)}")`);
+  }
+  const spoken = sentences(slide.narration ?? '');
+  for (const sentence of [...spoken, ...sentences(slide.summary ?? '')]) {
+    const count = wordCount(sentence);
+    if (count > MAX_SENTENCE_WORDS) warnings.push(`${at}: ${count}-word sentence; split it ("${sentence.slice(0, 60)}…")`);
+  }
+  if (spoken.length && words / spoken.length > MAX_AVERAGE_SENTENCE_WORDS) {
+    warnings.push(`${at}: sentences average ${Math.round(words / spoken.length)} words; aim for under 15`);
+  }
+  for (const idiom of IDIOMS) {
+    if (`${slide.narration} ${slide.summary}`.toLowerCase().includes(idiom)) warnings.push(`${at}: idiom "${idiom}"; say it plainly`);
   }
   if (slide.audio && !existsSync(join(folder, slide.audio))) {
     warnings.push(`${at}: audio "${slide.audio}" is missing; run generate-audio.ts`);
