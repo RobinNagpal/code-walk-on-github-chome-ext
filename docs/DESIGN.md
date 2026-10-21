@@ -23,7 +23,9 @@ One folder per walkthrough, named with its hyphen-separated id. Inside: `walkthr
   line anchors.
 - **PRReview:** `pullRequest` holds `number`, `baseCommit` (the merge base) and `headCommit`, and `repo.commit` equals
   `headCommit`. Each slide opens
-  `https://github.com/<owner>/<repo>/pull/<n>/files?w=1&diff=<unified|split>#diff-<sha256(path)>R<start>-R<end>`.
+  `https://github.com/<owner>/<repo>/pull/<n>/changes?w=1&diff=<unified|split>#diff-<sha256(path)>R<start>-R<end>`.
+  - `/changes` is the newer layout's address. For the classic layout, GitHub redirects it to `/files` and keeps the
+    query.
   - `w=1` hides whitespace changes.
   - The diff layout is a player setting.
   - `R` lines are numbered as in the head; slides with `"side": "old"` use `L` lines, numbered as in the base.
@@ -116,7 +118,8 @@ side (`left-side-diff-cell` / `right-side-diff-cell`).
 - An unchanged line carries its `R` anchor on both sides, so split view picks the cell on the slide's side, plus the
   number cell just before it.
 - Unified view highlights the whole row.
-- `samePage` treats `/files` and `/changes` as the same page.
+- `samePage` treats `/files` and `/changes` as the same page, and compares only the `diff` parameter there, because
+  GitHub may leave `w=1` out of the URL.
 - GitHub collapses deleted files and large diffs behind a **Load diff** button, and the extension presses it.
 
 Both layouts were checked against saved copies of the newer page: split view on one PR, unified view on another.

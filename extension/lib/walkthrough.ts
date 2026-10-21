@@ -96,7 +96,8 @@ export async function diffAnchor(file: string): Promise<string> {
 export async function slideTarget(walkthrough: Walkthrough, slide: Slide, diffView: DiffView): Promise<SlideTarget | undefined> {
   const { host = 'github.com', owner, name, commit } = walkthrough.repo;
   if (walkthroughType(walkthrough) === WalkthroughType.PRReview && walkthrough.pullRequest) {
-    const filesTab = `https://${host}/${owner}/${name}/pull/${walkthrough.pullRequest.number}/files?w=1&diff=${diffView}`;
+    // /changes is the newer layout's address; GitHub redirects it to /files for the classic layout, keeping the query.
+    const filesTab = `https://${host}/${owner}/${name}/pull/${walkthrough.pullRequest.number}/changes?w=1&diff=${diffView}`;
     if (!slide.file) return { url: filesTab, focus: { kind: 'blob' } };
     const anchor = await diffAnchor(slide.file);
     const side = slide.side ?? 'new';
@@ -123,15 +124,17 @@ export function focusHash(focus: FocusTarget): string | undefined {
 /**
  * Whether two URLs show the same page, ignoring the hash and the order of query
  * parameters (GitHub rewrites ?w=1&diff=split as ?diff=split&w=1). A pull request's
- * Files changed tab is /files in the classic layout and /changes in the newer one.
+ * Files changed tab is /files in the classic layout and /changes in the newer one, and
+ * there only the diff layout makes a different page: GitHub may leave w=1 out of the URL.
  */
 export function samePage(a: string, b: string): boolean {
   try {
     const key = (raw: string) => {
       const url = new URL(raw);
+      const filesTab = url.pathname.match(/^(.*\/pull\/\d+)\/(?:files|changes)$/);
+      if (filesTab) return `${url.origin}${filesTab[1]}/changes?diff=${url.searchParams.get('diff') ?? ''}`;
       url.searchParams.sort();
-      const path = url.pathname.replace(/(\/pull\/\d+)\/files$/, '$1/changes');
-      return `${url.origin}${path}?${url.searchParams}`;
+      return `${url.origin}${url.pathname}?${url.searchParams}`;
     };
     return key(a) === key(b);
   } catch {

@@ -25,7 +25,7 @@ There are two types of walkthrough (`type` in `walkthrough.json`):
 ## Install the Chrome extension
 
 **From the prebuilt zip (no build tools needed):** unzip
-[`releases/code-walkthroughs-extension-0.2.1-chrome.zip`](releases/code-walkthroughs-extension-0.2.1-chrome.zip) into a
+[`releases/code-walkthroughs-extension-0.2.2-chrome.zip`](releases/code-walkthroughs-extension-0.2.2-chrome.zip) into a
 folder you keep, then follow the steps below and choose that folder in step 2.
 
 **From source:** you need Node.js 22.18 or newer and pnpm.
