@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Installs the code-walkthrough skill for Claude Code (~/.claude/skills) and/or
-# Antigravity CLI (~/.gemini/antigravity-cli/skills), and asks for the walkthroughs
+# Antigravity CLI (~/.gemini/config/skills), and asks for the walkthroughs
 # folder and the voice. Without a terminal (piped or run by a tool) it keeps the
 # current settings, or the defaults, instead of asking.
 #
@@ -15,7 +15,7 @@ export NODE_NO_WARNINGS=1
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="$REPO/skills/code-walkthrough"
 CLAUDE_DIR="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
-ANTIGRAVITY_DIR="${ANTIGRAVITY_SKILLS_DIR:-$HOME/.gemini/antigravity-cli/skills}"
+ANTIGRAVITY_DIR="${ANTIGRAVITY_SKILLS_DIR:-$HOME/.gemini/config/skills}"
 
 copy=false
 targets=()

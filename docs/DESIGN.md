@@ -65,7 +65,7 @@ Voice providers. The agent writes the narration and a provider reads it aloud:
   lists the options.
 
 Install: `scripts/install-skill.sh` links the skill into `~/.claude/skills/code-walkthrough` (Claude Code, the default)
-and/or `~/.gemini/antigravity-cli/skills/code-walkthrough` (`--antigravity`). It runs `npm install` for the skill's two
+and/or `~/.gemini/config/skills/code-walkthrough` (`--antigravity`). It runs `npm install` for the skill's two
 dependencies and **asks for the walkthroughs folder and the voice**.
 
 The repo is also a plugin for both tools:

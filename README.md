@@ -82,7 +82,7 @@ scripts/install-skill.sh --claude --antigravity   # both
 The script:
 
 1. Links the skill into `~/.claude/skills/code-walkthrough` (Claude Code) and/or
-   `~/.gemini/antigravity-cli/skills/code-walkthrough` (Antigravity CLI). A later `git pull` updates it. Add `--copy` to
+   `~/.gemini/config/skills/code-walkthrough` (Antigravity CLI). A later `git pull` updates it. Add `--copy` to
    copy it instead.
 2. Installs its two small JavaScript dependencies.
 3. **Asks for your walkthroughs folder and the voice to use.** Both tools share these settings.
