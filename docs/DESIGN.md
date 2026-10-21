@@ -119,8 +119,8 @@ side (`left-side-diff-cell` / `right-side-diff-cell`).
 - `samePage` treats `/files` and `/changes` as the same page.
 - GitHub collapses deleted files and large diffs behind a **Load diff** button, and the extension presses it.
 
-The split-view rules were checked against a saved copy of the newer page. The unified-view rule has not been checked
-yet.
+Both layouts were checked against saved copies of the newer page: split view on one PR, unified view on another.
+In unified view, a slide's lines are marked as whole rows, on both the new and the old side.
 
 ### Highlighting and scrolling
 
