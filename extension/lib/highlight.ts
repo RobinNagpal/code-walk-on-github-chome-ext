@@ -2,9 +2,11 @@
 // pull request's diff (Files changed tab).
 //
 // Blob view: each code line has id="LC<n>", each line-number cell data-line-number="<n>".
-// Diff view: each line-number cell has id="<anchor>R<n>" (new side) or "<anchor>L<n>" (old
-// side), where <anchor> is "diff-" + sha256 of the file path. In split view the code cell
-// follows its number cell; in unified view the row holds both numbers and the code.
+// Diff view: a line's anchor is "<anchor>R<n>" (new side) or "<anchor>L<n>" (old side), where
+// <anchor> is "diff-" + sha256 of the file path. The classic layout puts it as the id of the
+// line-number cell; the newer layout (/pull/<n>/changes) puts it in data-line-anchor on the
+// code cell. Either way, in split view the code cell follows its number cell, and in unified
+// view the row holds both numbers and the code.
 //
 // The highlight is a stylesheet rule rather than inline styles, so it survives GitHub's
 // re-renders.
@@ -44,10 +46,20 @@ function range(lines: LineRange): number[] {
   return Array.from({ length: lines.end - lines.start + 1 }, (_, i) => lines.start + i);
 }
 
+function diffLineAnchor(target: Extract<FocusTarget, { kind: 'diff' }>, n: number): string {
+  return `${target.anchor}${target.side === 'new' ? 'R' : 'L'}${n}`;
+}
+
+/** The newer layout's code cell for a line. A hunk header cell carries the anchor of the line before the hunk. */
+function codeCell(anchor: string): string {
+  return `td[data-line-anchor="${anchor}"]:not(.diff-hunk-cell)`;
+}
+
 /** CSS selector for line n's element, used to find and to scroll. */
 function lineSelector(target: FocusTarget, n: number): string {
   if (target.kind === 'blob') return `[id="LC${n}"], .react-line-number[data-line-number="${n}"]`;
-  return `[id="${target.anchor}${target.side === 'new' ? 'R' : 'L'}${n}"]`;
+  const anchor = diffLineAnchor(target, n);
+  return `[id="${anchor}"], ${codeCell(anchor)}`;
 }
 
 function highlightCss(target: FocusTarget, lines: LineRange): string {
@@ -60,10 +72,18 @@ function highlightCss(target: FocusTarget, lines: LineRange): string {
       [id="LC${lines.end}"] { box-shadow: inset 0 -1px 0 rgba(255, 170, 0, 0.8); }
     `;
   }
-  const ids = numbers.map((n) => `[id="${target.anchor}${target.side === 'new' ? 'R' : 'L'}${n}"]`);
+  const anchors = numbers.map((n) => diffLineAnchor(target, n));
+  const ids = anchors.map((anchor) => `[id="${anchor}"]`);
+  // Newer layout: split view marks its code cells with their side. An unchanged line carries
+  // its R anchor on both sides, so only the slide's side is picked.
+  const sideClass = target.side === 'new' ? 'right-side-diff-cell' : 'left-side-diff-cell';
+  const splitCells = anchors.map((anchor) => `${codeCell(anchor)}.${sideClass}`);
+  const unifiedCells = anchors.map((anchor) => `${codeCell(anchor)}:not(.left-side-diff-cell, .right-side-diff-cell)`);
   return `
     ${ids.map((id) => `table.file-diff-split ${id}, table.file-diff-split ${id} + td`).join(',')} { background-color: ${STRONG} !important; }
     ${ids.map((id) => `table:not(.file-diff-split) tr:has(> ${id}) > td`).join(',')} { background-color: ${STRONG} !important; }
+    ${splitCells.map((cell) => `${cell}, td:has(+ ${cell})`).join(',')} { background-color: ${STRONG} !important; }
+    ${unifiedCells.map((cell) => `tr:has(> ${cell}) > td`).join(',')} { background-color: ${STRONG} !important; }
   `;
 }
 
@@ -74,6 +94,12 @@ function scrollTo(target: FocusTarget, lines: LineRange, first: HTMLElement): vo
   // Centre a range that fits; otherwise show its top part.
   const middle = span <= visibleLines ? Math.floor((lines.start + lines.end) / 2) : lines.start + Math.floor(visibleLines / 2) - 2;
   (visible(lineSelector(target, middle)) ?? first).scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+/** GitHub collapses deleted files and large diffs behind a "Load diff" button; press it. */
+function loadCollapsedDiff(anchor: string): void {
+  const buttons = document.querySelectorAll<HTMLButtonElement>(`[id="${anchor}"] button, [data-diff-anchor="${anchor}"] button`);
+  [...buttons].find((button) => /^load diff$/i.test(button.textContent?.trim() ?? ''))?.click();
 }
 
 export function focusLines(target: FocusTarget | undefined): void {
@@ -94,6 +120,7 @@ export function focusLines(target: FocusTarget | undefined): void {
   // in which case asking GitHub to jump to the anchor brings the lines into the DOM.
   const startedAt = Date.now();
   let askedGitHub = false;
+  if (target.kind === 'diff') loadCollapsedDiff(target.anchor);
   pending = window.setInterval(() => {
     const first = visible(lineSelector(target, lines.start));
     if (first) {

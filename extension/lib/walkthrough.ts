@@ -122,14 +122,16 @@ export function focusHash(focus: FocusTarget): string | undefined {
 
 /**
  * Whether two URLs show the same page, ignoring the hash and the order of query
- * parameters (GitHub rewrites ?w=1&diff=split as ?diff=split&w=1).
+ * parameters (GitHub rewrites ?w=1&diff=split as ?diff=split&w=1). A pull request's
+ * Files changed tab is /files in the classic layout and /changes in the newer one.
  */
 export function samePage(a: string, b: string): boolean {
   try {
     const key = (raw: string) => {
       const url = new URL(raw);
       url.searchParams.sort();
-      return `${url.origin}${url.pathname}?${url.searchParams}`;
+      const path = url.pathname.replace(/(\/pull\/\d+)\/files$/, '$1/changes');
+      return `${url.origin}${path}?${url.searchParams}`;
     };
     return key(a) === key(b);
   } catch {

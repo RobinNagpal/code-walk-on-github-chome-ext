@@ -109,8 +109,18 @@ The rules are scoped by the table's `file-diff-split` class, so no detection is 
 query parameters sorted (GitHub rewrites `?w=1&diff=split` as `?diff=split&w=1`). That way, slides within one PR move
 the highlight without reloading the page, and switching Unified/Split reloads it in the new layout.
 
-GitHub's newer "Files changed" layout for logged-in users may use different markup. There, the extension relies on the
-URL anchor, which GitHub scrolls to and highlights itself.
+GitHub's newer "Files changed" layout (`/pull/<n>/changes`, shown to logged-in users) has no such ids. Instead, each
+code cell carries `data-line-anchor="diff-<sha256(path)>R<n>"` (or `L<n>`), and in split view a class that names its
+side (`left-side-diff-cell` / `right-side-diff-cell`).
+
+- An unchanged line carries its `R` anchor on both sides, so split view picks the cell on the slide's side, plus the
+  number cell just before it.
+- Unified view highlights the whole row.
+- `samePage` treats `/files` and `/changes` as the same page.
+- GitHub collapses deleted files and large diffs behind a **Load diff** button, and the extension presses it.
+
+The split-view rules were checked against a saved copy of the newer page. The unified-view rule has not been checked
+yet.
 
 ### Highlighting and scrolling
 
