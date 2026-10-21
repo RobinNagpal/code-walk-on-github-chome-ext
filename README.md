@@ -1,6 +1,6 @@
 # Code Walkthroughs on GitHub
 
-Audio walkthroughs of code that play right on GitHub. Claude Code writes them with the **code-walkthrough skill**, and
+Audio walkthroughs of code that play right on GitHub. Claude Code or Antigravity CLI writes them with the **code-walkthrough skill**, and
 the **Code Walkthroughs Chrome extension** plays them. While a slide's narration plays, the extension opens the right
 file on GitHub, scrolls to the right lines and highlights them. Then it moves on to the next slide, which can be
 another part of the same file, another function, or another file.
@@ -66,34 +66,49 @@ its header; it remembers where you put it.
 The narration keeps playing while GitHub loads the next file. If a slide has no MP3, the extension reads its narration
 with Chrome's built-in voice.
 
-## Install the Claude skill
+## Install the skill
 
-You can install it with the install script or as a Claude Code plugin.
+The skill works in **Claude Code** and in **Antigravity CLI** (`agy`, Google's replacement for Gemini CLI). Both use
+the same `SKILL.md` format, so the same skill folder serves both. Install it with the install script, or as a plugin.
 
 ### Option A: install script (recommended)
 
 ```bash
-scripts/install-skill.sh
+scripts/install-skill.sh                          # Claude Code
+scripts/install-skill.sh --antigravity            # Antigravity CLI
+scripts/install-skill.sh --claude --antigravity   # both
 ```
 
 The script:
 
-1. Links the skill into `~/.claude/skills/code-walkthrough`, so a later `git pull` updates it. Use `--copy` to copy it
-   instead.
+1. Links the skill into `~/.claude/skills/code-walkthrough` (Claude Code) and/or
+   `~/.gemini/antigravity-cli/skills/code-walkthrough` (Antigravity CLI). A later `git pull` updates it. Add `--copy` to
+   copy it instead.
 2. Installs its two small JavaScript dependencies.
-3. **Asks for your walkthroughs folder and the voice to use.**
+3. **Asks for your walkthroughs folder and the voice to use.** Both tools share these settings.
 
-### Option B: Claude Code plugin
+### Option B: plugin
+
+Claude Code:
 
 ```
 /plugin install code-walkthrough --marketplace RobinNagpal/code-walk-on-github-chome-ext
 ```
 
-The first time the skill runs, it asks for the walkthroughs folder.
+Antigravity CLI:
+
+```bash
+agy plugin install https://github.com/RobinNagpal/code-walk-on-github-chome-ext
+```
+
+The first time the skill runs, it asks for the walkthroughs folder and installs its dependencies.
+
+In Antigravity CLI, every skill is also a slash command, so you can type `/code-walkthrough`, or just ask for a
+walkthrough as below.
 
 ### Voices
 
-Claude writes the narration; a text-to-speech provider reads it. Claude has no speech API.
+The agent (Claude or Gemini) writes the narration; a text-to-speech provider reads it aloud.
 
 | Provider | API key (environment variable) | Models |
 | --- | --- | --- |
@@ -102,18 +117,19 @@ Claude writes the narration; a text-to-speech provider reads it. Claude has no s
 | `gemini` | `GEMINI_API_KEY` or `GOOGLE_API_KEY` | `gemini-3.8-flash-lite-tts` (default, cheapest), `gemini-3.8-flash-tts`, `gemini-3.1-flash-tts-preview`, `gemini-2.5-pro-preview-tts`. Voice `Charon` by default. |
 
 **API keys.** Put them in a `.env` file at the root of this repository; it is git-ignored, and `.env.example` shows the
-format. Keys already in your environment take precedence.
+format. Keys already in your environment take precedence. If you installed the skill as a plugin or with `--copy`, put
+them in `~/.config/code-walkthroughs/.env` instead.
 
 ```bash
 cp .env.example .env    # then fill in GEMINI_API_KEY (or GOOGLE_API_KEY) / OPENAI_API_KEY
 ```
 
-**Voice and model.** Change them at any time by asking Claude ("use the cheapest Gemini voice for walkthroughs"), or
+**Voice and model.** Change them at any time by asking the agent ("use the cheapest Gemini voice for walkthroughs"), or
 directly:
 
 ```bash
-node ~/.claude/skills/code-walkthrough/scripts/config.ts models                       # list choices
-node ~/.claude/skills/code-walkthrough/scripts/config.ts set-voice gemini - gemini-3.8-flash-lite-tts
+node skills/code-walkthrough/scripts/config.ts models                       # list choices
+node skills/code-walkthrough/scripts/config.ts set-voice gemini - gemini-3.8-flash-lite-tts
 ```
 
 `-` keeps the provider's default voice. Pass `--provider`, `--voice` or `--model` to `generate-audio.ts` for a one-off
@@ -123,11 +139,11 @@ No native tools are needed: no `say`, no ffmpeg. OpenAI and Gemini audio is enco
 
 ### Generating a walkthrough
 
-In any repository, ask Claude Code, for example:
+In any repository, ask Claude Code or Antigravity CLI, for example:
 
 > Create a 10 minute code walkthrough of how requests are authenticated
 
-Claude then does the following:
+The agent then does the following:
 
 1. Pins the current pushed commit.
 2. Reads the code.
@@ -136,11 +152,11 @@ Claude then does the following:
 
 When it finishes, open the extension's list and start the walkthrough.
 
-For a pull request review, give Claude the PR:
+For a pull request review, give it the PR:
 
 > Create a review walkthrough for https://github.com/RobinNagpal/dodao-ui/pull/1613
 
-Claude reads the PR's description and its whitespace-ignored diff, and then writes a `PRReview` walkthrough. It covers
+The agent reads the PR's description and its whitespace-ignored diff, and then writes a `PRReview` walkthrough. It covers
 what the PR does, then each important change in a sensible order, and ends with risks and things to check.
 `validate.ts` makes sure every highlighted range is inside a part of the diff that GitHub actually shows. The extension
 always opens the PR's current Files changed tab, so regenerate the walkthrough if the PR gets new commits.
@@ -156,8 +172,9 @@ extension/                 Chrome extension: WXT + Preact + TypeScript
   entrypoints/             background (controller), offscreen (audio), github.content (player), popup, options
   components/              Player, Library
   lib/                     walkthrough format, messages, folder access, highlighting
-skills/code-walkthrough/   the Claude skill: SKILL.md, scripts/ (config, validate, generate-audio, tts), schema
-.claude-plugin/            plugin and marketplace manifests
+skills/code-walkthrough/   the skill (Claude Code and Antigravity CLI): SKILL.md, scripts/ (config, validate, generate-audio, tts), schema
+.claude-plugin/            Claude Code plugin and marketplace manifests
+plugin.json                Antigravity CLI plugin manifest (its skills are in skills/)
 scripts/install-skill.sh   skill installer
 docs/DESIGN.md             how it fits together
 walkthroughs/              local walkthroughs (git-ignored)

@@ -1,9 +1,9 @@
 # Code Walkthroughs — design
 
-Audio code walkthroughs that play on top of GitHub. A Claude skill writes them; a Chrome extension plays them.
+Audio code walkthroughs that play on top of GitHub. A skill for Claude Code or Antigravity CLI writes them; a Chrome extension plays them.
 
 ```
- Claude Code + skill                         walkthroughs folder                     Chrome extension
+ Claude Code / agy + skill                   walkthroughs folder                     Chrome extension
  ───────────────────                         ───────────────────                     ────────────────
  reads the repo, writes  ──────────────▶  <folder>/<walkthrough-id>/   ◀──────────  reads the folder (File System
  walkthrough.json, runs                    walkthrough.json                         Access API), plays the audio,
@@ -35,18 +35,22 @@ One folder per walkthrough, named with its hyphen-separated id. Inside: `walkthr
   `lines`, and `audio` + `durationSec` (filled in by the audio script).
 - A slide without an MP3 still plays: the extension speaks its narration with Chrome's built-in `chrome.tts` voice.
 
-## 2. The Claude skill (`skills/code-walkthrough/`)
+## 2. The skill (`skills/code-walkthrough/`)
+
+One skill folder serves Claude Code and Antigravity CLI (`agy`). Both read the same `SKILL.md` format: YAML
+frontmatter with `name` and `description`, then the instructions. `SKILL.md` refers to its scripts as
+`<skill-dir>/scripts/…` and never names a particular agent's paths.
 
 | File | Job |
 | --- | --- |
-| `SKILL.md` | The procedure Claude follows: configure the folder, agree on topic + length, pin the commit, read the code, write the JSON, validate, generate audio, report. |
+| `SKILL.md` | The procedure the agent follows: configure the folder, agree on topic + length, pin the commit, read the code, write the JSON, validate, generate audio, report. |
 | `scripts/config.ts` | Reads and writes `~/.config/code-walkthroughs/config.json`: the folder (`get` / `set <folder>`; `CODE_WALKTHROUGHS_DIR` overrides it) and the voice (`voice` / `set-voice <provider> [voice] [model]`). |
-| `scripts/validate.ts` | Checks the JSON shape and that every file and line range exists at the pinned commit (local clone first, raw.githubusercontent.com as a fallback). Also flags ranges that start or end on a blank line, narration a voice will read badly (identifiers, symbols, decimals, paths), and a length more than 10% off `targetMinutes`. `--show` / `--slide` print the lines so Claude can check the framing. |
+| `scripts/validate.ts` | Checks the JSON shape and that every file and line range exists at the pinned commit (local clone first, raw.githubusercontent.com as a fallback). Also flags ranges that start or end on a blank line, narration a voice will read badly (identifiers, symbols, decimals, paths), and a length more than 10% off `targetMinutes`. `--show` / `--slide` print the lines so the agent can check the framing. |
 | `scripts/tts.ts` | The voice providers (below). Each returns an MP3 and its exact duration. |
 | `scripts/generate-audio.ts` | Narration → `<slide-id>.mp3`. Skips unchanged slides via `.audio-manifest.json`. Retries failed requests. |
 | `walkthrough.schema.json` | The format. |
 
-Voice providers. Claude has no speech API, so Claude writes the narration and a provider reads it:
+Voice providers. The agent writes the narration and a provider reads it aloud:
 
 | Provider | Key | How |
 | --- | --- | --- |
@@ -60,10 +64,18 @@ Voice providers. Claude has no speech API, so Claude writes the narration and a 
 - **Choosing a model:** `config.ts set-voice <provider> [voice|-] [model]` stores the choice, and `config.ts models`
   lists the options.
 
-Install: `scripts/install-skill.sh` links the skill into `~/.claude/skills/code-walkthrough`, runs `npm install` for its
-two dependencies, and **asks for the walkthroughs folder and the voice**. The repo is also a Claude Code plugin marketplace
-(`.claude-plugin/`), so `/plugin marketplace add RobinNagpal/code-walk-on-github-chome-ext` works too; in that case the
-skill asks for the folder the first time it runs.
+Install: `scripts/install-skill.sh` links the skill into `~/.claude/skills/code-walkthrough` (Claude Code, the default)
+and/or `~/.gemini/antigravity-cli/skills/code-walkthrough` (`--antigravity`). It runs `npm install` for the skill's two
+dependencies and **asks for the walkthroughs folder and the voice**.
+
+The repo is also a plugin for both tools:
+
+- **Claude Code:** a plugin marketplace (`.claude-plugin/`), so `/plugin marketplace add
+  RobinNagpal/code-walk-on-github-chome-ext` works.
+- **Antigravity CLI:** the root `plugin.json` plus `skills/`, so `agy plugin install
+  https://github.com/RobinNagpal/code-walk-on-github-chome-ext` works.
+
+Installed as a plugin, the skill asks for the folder the first time it runs.
 
 Sizing rule in the skill: total words = minutes × 165. Budget the words per slide before writing, at 90–200 words a
 slide.
@@ -180,8 +192,9 @@ extension/                 WXT + Preact + TypeScript Chrome extension
   components/              Player (floating card), Library (walkthrough list)
   lib/                     walkthrough format, messages, folder access, settings
   public/icon/             icons
-skills/code-walkthrough/   the Claude skill (SKILL.md, scripts/, schema)
-.claude-plugin/            plugin + marketplace manifests for /plugin install
+skills/code-walkthrough/   the skill for Claude Code and Antigravity CLI (SKILL.md, scripts/, schema)
+.claude-plugin/            Claude Code plugin + marketplace manifests for /plugin install
+plugin.json                Antigravity CLI plugin manifest (agy plugin install)
 scripts/install-skill.sh   installs the skill and asks for the folder
 walkthroughs/              local walkthroughs (git-ignored)
 docs/DESIGN.md             this file

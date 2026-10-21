@@ -38,7 +38,7 @@ Voices:
 | `openai` | `OPENAI_API_KEY` | `alloy` / `gpt-4o-mini-tts` | `tts-1`, `tts-1-hd` |
 | `gemini` | `GEMINI_API_KEY` or `GOOGLE_API_KEY` | `Charon` / `gemini-3.8-flash-lite-tts` (cheapest) | `gemini-3.8-flash-tts`, `gemini-3.1-flash-tts-preview`, `gemini-2.5-pro-preview-tts` |
 
-Claude has no speech API, so Claude writes the narration and one of these providers reads it.
+You write the narration, and one of these providers reads it aloud.
 
 **API keys** can be set in the environment or in a `.env` file that belongs to the skill. The scripts read, in order:
 
