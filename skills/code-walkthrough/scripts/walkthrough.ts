@@ -1,5 +1,5 @@
 // Shared walkthrough format helpers for the skill scripts.
-// Keep in sync with extension/lib/walkthrough.ts and ../walkthrough.schema.json.
+// Keep in sync with chrome-extension/lib/walkthrough.ts and ../walkthrough.schema.json.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 

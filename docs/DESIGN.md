@@ -47,6 +47,7 @@ frontmatter with `name` and `description`, then the instructions. `SKILL.md` ref
 | `scripts/config.ts` | Reads and writes `~/.config/code-walkthroughs/config.json`: the folder (`get` / `set <folder>`; `CODE_WALKTHROUGHS_DIR` overrides it) and the voice (`voice` / `set-voice <provider> [voice] [model]`). |
 | `scripts/validate.ts` | Checks the JSON shape and that every file and line range exists at the pinned commit (local clone first, raw.githubusercontent.com as a fallback). Also flags ranges that start or end on a blank line, narration a voice will read badly (identifiers, symbols, decimals, paths), and a length more than 10% off `targetMinutes`. `--show` / `--slide` print the lines so the agent can check the framing. |
 | `scripts/tts.ts` | The voice providers (below). Each returns an MP3 and its exact duration. |
+| `scripts/pack.ts` | Packs a walkthrough into `<walkthroughs-folder>/<id>.zip`: one `<id>/` folder with `walkthrough.json` and the MP3s (stored, not recompressed). Uses `fflate` (pure JavaScript). `generate-audio.ts` runs it at the end. |
 | `scripts/generate-audio.ts` | Narration → `<slide-id>.mp3`. Skips unchanged slides via `.audio-manifest.json`. Retries failed requests. |
 | `walkthrough.schema.json` | The format. |
 
@@ -80,7 +81,7 @@ Installed as a plugin, the skill asks for the folder the first time it runs.
 Sizing rule in the skill: total words = minutes × 165. Budget the words per slide before writing, at 90–200 words a
 slide.
 
-## 3. The Chrome extension (`extension/`)
+## 3. The Chrome extension (`chrome-extension/`)
 
 **Stack:** [WXT](https://wxt.dev) (Vite-based extension framework, Manifest V3) + [Preact](https://preactjs.com)
 (3 kB React-compatible UI) + TypeScript. `idb-keyval` stores the folder handle.
@@ -184,15 +185,54 @@ the popup and the player show **Grant access**, which opens the options page. On
 `storage`, `offscreen`, `tabs` (to read the controlled tab's URL), `tts` (spoken fallback), and the host permission
 `https://github.com/*`.
 
-## 4. Repository layout
+## 4. The VS Code extension (`vscode-extension/`)
+
+**Stack:** plain VS Code extension API, bundled with esbuild twice: for desktop VS Code (Node, `main`) and for
+vscode.dev / github.dev (a web worker, `browser`). The Player view is a webview with Preact. `fflate` reads zips. It
+uses no Node APIs, so the same code runs in both places.
+
+| Part | What it does |
+| --- | --- |
+| `library.ts` | **Open Walkthrough Zip** (the side bar button, or right-click a `.zip` in the Explorer) unpacks the zip into `globalStorageUri/walkthroughs/<id>/`. That is on disk in desktop VS Code and in the browser's storage on the web. Only plain file names from the walkthrough's own folder are written. Lists them in the **Walkthroughs** tree view. |
+| `source.ts` | A read-only document provider for `code-walkthrough://github.com/<owner>/<repo>/<commit>/<path>`. Public repositories come from raw.githubusercontent.com. A 404 on a private repository goes through the GitHub API with VS Code's GitHub sign-in. A file missing at a commit (added or deleted in a PR) is served empty. |
+| `navigator.ts` | Opens a slide. **Code tour:** the file at the pinned commit. **PR review:** `vscode.diff(base, head)`, from the merge base to the head. Highlights the lines with a whole-line decoration and scrolls to them. |
+| `controller.ts` | The walkthrough state: slide, playing, speed, Auto/Manual, and the diff layout. The layout is VS Code's own `diffEditor.renderSideBySide`. |
+| `playerView.ts`, `webview/` | The **Player** view, kept alive while hidden. It plays each slide's MP3 from a blob URL. A slide without audio runs a silent clock for its reading time. |
+
+How it deals with VS Code's quirks:
+
+- **A new diff jumps to its first change** once VS Code has compared the files, unless it opens with a selection. The
+  diff is opened with a selection at the slide's lines.
+- **Removed lines in one column:** the unified (inline) diff has no visible editor for the old side. It draws removed
+  lines inside the new file, above the line that follows them. `core/lineMap.ts` finds that line with a Myers line
+  diff, and the editor scrolls there.
+- **Audio bytes:** a webview receives typed arrays as plain objects; only an `ArrayBuffer` arrives intact. A file read
+  can also be a view into a larger buffer, so the MP3 is copied into its own `ArrayBuffer`.
+- **Autoplay:** Chromium starts audio only after a click. Clicking the walkthrough in the list is enough; if the
+  browser still refuses, the Player says "Press play".
+
+**Tests** (see `vscode-extension/README.md`):
+
+1. Unit tests in Node.
+2. The same integration suite inside a downloaded desktop VS Code (`@vscode/test-electron`) and inside VS Code for the
+   web in headless Chromium (`@vscode/test-web`).
+3. A Playwright click-through of a PR review and a code tour, in both.
+
+The tests use the PR #6 review of `robotics-basics` (silent audio) and the "clear the table, solution 1" code tour.
+
+## 5. Repository layout
 
 ```
-extension/                 WXT + Preact + TypeScript Chrome extension
+chrome-extension/          WXT + Preact + TypeScript Chrome extension
   entrypoints/             popup, options, background, offscreen, github.content
   components/              Player (floating card), Library (walkthrough list)
   lib/                     walkthrough format, messages, folder access, settings
   public/icon/             icons
+vscode-extension/          VS Code extension for desktop, vscode.dev and github.dev
+  src/                     extension, library, source, navigator, controller, player view; core/ is pure and unit tested
+  test/                    unit/, suite/ (in VS Code, desktop and web), ui/ (Playwright click-through)
 skills/code-walkthrough/   the skill for Claude Code and Antigravity CLI (SKILL.md, scripts/, schema)
+releases/                  prebuilt Chrome extension zip and VS Code .vsix
 .claude-plugin/            Claude Code plugin + marketplace manifests for /plugin install
 plugin.json                Antigravity CLI plugin manifest (agy plugin install)
 scripts/install-skill.sh   installs the skill and asks for the folder
@@ -200,12 +240,12 @@ walkthroughs/              local walkthroughs (git-ignored)
 docs/DESIGN.md             this file
 ```
 
-## 5. Delivery steps
+## 6. Delivery steps
 
 1. Skill + scripts. Dogfood them by generating two ~10-minute walkthroughs (`robot-arm-projects`,
    `v5-pick-glasses/04-clear-the-table`, solutions 1 and 2, pinned to `7fdba59`). Feed what the authoring agents hit
    back into `SKILL.md` and the scripts.
 2. Extension: shared libs, then background, offscreen, content script and player, then popup and options.
-3. `pnpm build`, which produces `extension/.output/chrome-mv3`, loadable unpacked. Type-check with `tsc --noEmit`.
+3. `pnpm build`, which produces `chrome-extension/.output/chrome-mv3`, loadable unpacked. Type-check with `tsc --noEmit`.
 4. README: install the extension (build, then Load unpacked) and install the skill (script or plugin).
 5. Review pass 1 (self), fix. Review pass 2 (independent reviewer agent), fix. Then commit to `main` and push.

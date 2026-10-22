@@ -1,0 +1,176 @@
+{
+  "name": "code-walkthroughs",
+  "displayName": "Code Walkthroughs",
+  "description": "Play audio code walkthroughs and pull request reviews in VS Code, vscode.dev and github.dev.",
+  "version": "0.1.0",
+  "publisher": "robinnagpal",
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RobinNagpal/code-walk-on-github-chome-ext"
+  },
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Education",
+    "Other"
+  ],
+  "main": "./dist/node/extension.js",
+  "browser": "./dist/web/extension.js",
+  "capabilities": {
+    "virtualWorkspaces": true,
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "codeWalkthroughs.openZip",
+        "title": "Open Walkthrough Zip\u2026",
+        "category": "Code Walkthroughs",
+        "icon": "$(file-zip)"
+      },
+      {
+        "command": "codeWalkthroughs.start",
+        "title": "Start Walkthrough",
+        "category": "Code Walkthroughs",
+        "icon": "$(play)"
+      },
+      {
+        "command": "codeWalkthroughs.remove",
+        "title": "Remove Walkthrough",
+        "category": "Code Walkthroughs",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "codeWalkthroughs.playPause",
+        "title": "Play or Pause",
+        "category": "Code Walkthroughs"
+      },
+      {
+        "command": "codeWalkthroughs.next",
+        "title": "Next Slide",
+        "category": "Code Walkthroughs"
+      },
+      {
+        "command": "codeWalkthroughs.previous",
+        "title": "Previous Slide",
+        "category": "Code Walkthroughs"
+      },
+      {
+        "command": "codeWalkthroughs.stop",
+        "title": "Stop Walkthrough",
+        "category": "Code Walkthroughs"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codeWalkthroughs",
+          "title": "Code Walkthroughs",
+          "icon": "media/activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "codeWalkthroughs": [
+        {
+          "id": "codeWalkthroughs.library",
+          "name": "Walkthroughs"
+        },
+        {
+          "id": "codeWalkthroughs.player",
+          "name": "Player",
+          "type": "webview"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "codeWalkthroughs.library",
+        "contents": "No walkthroughs yet. The code-walkthrough skill writes a zip next to each walkthrough it creates.\n[Open Walkthrough Zip](command:codeWalkthroughs.openZip)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "codeWalkthroughs.openZip",
+          "when": "view == codeWalkthroughs.library",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "codeWalkthroughs.start",
+          "when": "view == codeWalkthroughs.library && viewItem == walkthrough",
+          "group": "inline@1"
+        },
+        {
+          "command": "codeWalkthroughs.remove",
+          "when": "view == codeWalkthroughs.library && viewItem == walkthrough",
+          "group": "inline@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "codeWalkthroughs.openZip",
+          "when": "resourceExtname == .zip",
+          "group": "navigation@90"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "codeWalkthroughs.start",
+          "when": "false"
+        },
+        {
+          "command": "codeWalkthroughs.remove",
+          "when": "false"
+        }
+      ]
+    },
+    "colors": [
+      {
+        "id": "codeWalkthroughs.lineHighlight",
+        "description": "Background of the lines the current walkthrough slide talks about.",
+        "defaults": {
+          "dark": "#ffc40038",
+          "light": "#ffc40048",
+          "highContrast": "#ffc40048",
+          "highContrastLight": "#ffc40048"
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "compile": "tsc --noEmit",
+    "test:unit": "node --test --test-reporter=spec test/unit/*.test.ts",
+    "test:vscode": "node build.mjs --tests && node test/run-electron.mjs",
+    "test:web": "node build.mjs --tests && node test/run-web.mjs",
+    "test:ui": "node build.mjs && node test/ui-web.mjs && node test/ui-desktop.mjs",
+    "test": "pnpm test:unit && pnpm test:vscode && pnpm test:web && pnpm test:ui",
+    "package": "node build.mjs && mkdir -p .output && vsce package --no-dependencies --out .output/"
+  },
+  "dependencies": {
+    "fflate": "0.8.3",
+    "preact": "10.29.8"
+  },
+  "devDependencies": {
+    "@types/mocha": "10.0.10",
+    "@types/node": "22.18.0",
+    "@types/vscode": "1.100.0",
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/test-web": "0.0.81",
+    "@vscode/vsce": "4.0.0",
+    "esbuild": "0.28.2",
+    "mocha": "12.0.3",
+    "playwright": "1.64.1",
+    "typescript": "5.9.3"
+  },
+  "icon": "media/icon.png"
+}

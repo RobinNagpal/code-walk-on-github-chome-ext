@@ -4,7 +4,7 @@
 //   node config.ts set <folder>                           stores the folder (created if missing)
 //   node config.ts voice                                  prints the voice settings as JSON
 //   node config.ts models                                 lists providers, their models and API keys
-//   node config.ts set-voice <edge|openai|gemini> [voice|-] [model]
+//   node config.ts set-voice <edge|openai|gemini|silent> [voice|-] [model]
 //   node config.ts path                                   prints where the config file lives
 //
 // CODE_WALKTHROUGHS_DIR overrides the stored folder.

@@ -1,0 +1,5 @@
+allowBuilds:
+  esbuild: true
+  "@playwright/browser-chromium": true
+  # Signing is only needed to publish to the Marketplace, not to package a .vsix.
+  "@vscode/vsce-sign": false

@@ -158,3 +158,6 @@ walkthroughs/
 
 # Editor settings
 .idea/
+
+# VS Code builds downloaded by the extension tests
+.vscode-test-web

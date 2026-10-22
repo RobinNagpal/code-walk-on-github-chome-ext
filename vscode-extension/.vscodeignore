@@ -1,0 +1,10 @@
+# Only the bundles, the icon and the manifest go into the .vsix.
+**
+!dist/node/extension.js
+!dist/web/extension.js
+!dist/webview/player.js
+!dist/webview/player.css
+!media/**
+!package.json
+!README.md
+!LICENSE

@@ -1,17 +1,21 @@
 // Turns every slide's narration into <slide-id>.mp3 next to walkthrough.json and
 // writes each slide's `audio` and `durationSec` back into the JSON.
 //
-//   node generate-audio.ts <walkthrough-dir> [--provider edge|openai|gemini] [--voice <name>] [--model <name>] [--force]
+//   node generate-audio.ts <walkthrough-dir> [--provider edge|openai|gemini|silent] [--voice <name>] [--model <name>] [--force]
 //
 // The provider, voice and model default to the configured voice (config.ts set-voice),
 // which defaults to edge. See tts.ts for the providers and the API key each one reads.
 //
 // Slides whose narration and voice are unchanged since the last run are skipped
-// (tracked in .audio-manifest.json); --force regenerates everything.
+// (tracked in .audio-manifest.json); --force regenerates everything. `--provider silent` writes
+// silent MP3s as long as the narration, for testing the player without paying for speech.
+//
+// At the end it packs the walkthrough into <walkthroughs-folder>/<id>.zip (pack.ts).
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { voiceSettings } from './config.ts';
+import { packWalkthrough } from './pack.ts';
 import { apiKey, isProvider, missingKeyMessage, PROVIDERS, synthesize, type VoiceSettings } from './tts.ts';
 import { readWalkthrough, writeWalkthrough } from './walkthrough.ts';
 
@@ -35,7 +39,7 @@ const force = args.includes('--force');
 const configured = voiceSettings();
 const provider = option('provider') ?? configured.provider;
 if (!dir || !isProvider(provider)) {
-  console.error('Usage: node generate-audio.ts <walkthrough-dir> [--provider edge|openai|gemini] [--voice <name>] [--model <name>] [--force]');
+  console.error('Usage: node generate-audio.ts <walkthrough-dir> [--provider edge|openai|gemini|silent] [--voice <name>] [--model <name>] [--force]');
   process.exit(2);
 }
 // A voice or model configured for one provider means nothing to another.
@@ -107,3 +111,4 @@ for (const file of readdirSync(folder)) {
 save();
 const total = walkthrough.slides.reduce((sum, s) => sum + (s.durationSec ?? 0), 0);
 console.log(`\n${walkthrough.slides.length} slides, ${(total / 60).toFixed(1)} min of audio at 1x`);
+console.log(`zip: ${packWalkthrough(folder)}`);

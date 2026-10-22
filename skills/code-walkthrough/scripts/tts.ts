@@ -3,15 +3,17 @@
 //   edge    Microsoft Edge neural voices via msedge-tts. Free, no key.
 //   openai  OpenAI speech API. Key: OPENAI_API_KEY.
 //   gemini  Gemini speech generation (Interactions API). Key: GEMINI_API_KEY (or GOOGLE_API_KEY).
+//   silent  Silence as long as the narration would take to read (165 words a minute). For testing
+//           the player without paying for speech.
 //
 // OpenAI and Gemini return raw 16-bit PCM, which is encoded to MP3 in JavaScript (lamejs).
-// Claude has no speech API: Claude writes the narration, one of these voices reads it.
+// The agent writes the narration; one of these voices reads it.
 // Keys may also come from a .env file; see env.ts.
 import { loadEnv } from './env.ts';
 
 loadEnv();
 
-export type Provider = 'edge' | 'openai' | 'gemini';
+export type Provider = 'edge' | 'openai' | 'gemini' | 'silent';
 
 export interface VoiceSettings {
   provider: Provider;
@@ -36,9 +38,12 @@ export const PROVIDERS: Record<Provider, { voice: string; model?: string; models
     models: ['gemini-3.8-flash-lite-tts', 'gemini-3.8-flash-tts', 'gemini-3.1-flash-tts-preview', 'gemini-2.5-pro-preview-tts'],
     keys: ['GEMINI_API_KEY', 'GOOGLE_API_KEY'],
   },
+  silent: { voice: 'none', keys: [] },
 };
 
 const MP3_KBPS = 48;
+const WORDS_PER_MINUTE = 165;
+const SILENT_RATE = 16_000;
 // OpenAI's speech endpoint rejects input longer than this; longer narration is sent in pieces.
 const MAX_CHARS = 4000;
 
@@ -68,6 +73,10 @@ export async function synthesize(text: string, settings: VoiceSettings): Promise
       return pcmToSpeech(await concatPcm(split(text).map((part) => () => openai(part, voice, model))), 24_000);
     case 'gemini':
       return pcmToSpeech(await concatPcm(split(text).map((part) => () => gemini(part, voice, model))), GEMINI_RATE);
+    case 'silent': {
+      const words = text.split(/\s+/).filter(Boolean).length;
+      return pcmToSpeech(new Int16Array(Math.max(1, Math.round((words / WORDS_PER_MINUTE) * 60 * SILENT_RATE))), SILENT_RATE);
+    }
   }
 }
 

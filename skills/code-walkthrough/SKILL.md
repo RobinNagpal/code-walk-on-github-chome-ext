@@ -1,13 +1,19 @@
 ---
 name: code-walkthrough
-description: Generate an audio code walkthrough (walkthrough.json plus one MP3 per slide) for playback on GitHub with the Code Walkthroughs Chrome extension. Two types are supported. A code tour explains a repository pinned to a commit. A PR review walks through a pull request's changes in its Files changed tab. Use when the user asks to create, generate, record, or update a code walkthrough, code tour, PR walkthrough, PR review walkthrough, or audio explanation of code or of a pull request (for example when they give a GitHub pull request URL), or to set the code walkthroughs folder or voice.
+description: Generate an audio code walkthrough (walkthrough.json plus one MP3 per slide, packed into a zip) for playback on GitHub with the Code Walkthroughs Chrome extension, or in VS Code, vscode.dev and github.dev with the Code Walkthroughs VS Code extension. Two types are supported. A code tour explains a repository pinned to a commit. A PR review walks through a pull request's changes in its Files changed tab. Use when the user asks to create, generate, record, or update a code walkthrough, code tour, PR walkthrough, PR review walkthrough, or audio explanation of code or of a pull request (for example when they give a GitHub pull request URL), or to set the code walkthroughs folder or voice.
 ---
 
 # Code walkthrough
 
 A walkthrough is a folder of slides. Each slide points at a file and a line range, has a short on-screen summary, and
-has narration that becomes an MP3. The Chrome extension lists the walkthroughs in the folder and plays them in a
-floating player on GitHub. The `type` field says what a walkthrough shows:
+has narration that becomes an MP3. Two players read the same walkthroughs:
+
+- **Chrome extension:** lists the walkthroughs in the folder and plays them in a floating player on GitHub.
+- **VS Code extension** (desktop VS Code, vscode.dev, github.dev): opens the walkthrough's zip, which the audio step
+  writes next to the folder as `<id>.zip`. It shows each slide in the editor, with the file at the pinned commit or
+  the PR's diff.
+
+The `type` field says what a walkthrough shows:
 
 | `type` | Use it for | The extension shows each slide |
 | --- | --- | --- |
@@ -69,7 +75,8 @@ You need three things. If the user didn't give them, ask once, in one question, 
   follow section 3b instead of section 3.
 - **Length in minutes:** default 10 for a code tour. For a PR review, size it to the change: about 2–3 minutes for a
   small PR (under 100 changed lines), plus about 1 minute per further 75 changed lines, up to 15 minutes unless the user
-  asks for more.
+  asks for more. Count only lines people wrote: leave generated files (images such as SVGs, build output), vendored
+  code and lock files out of the count.
 - **Name:** derive a short hyphen-separated id from the topic (for example `auth-token-refresh`) unless the user gave one.
   For a PR review use `<repo>-pr-<number>-<short-title>`, for example `dodao-ui-pr-1613-seo-playground`.
 
@@ -98,7 +105,8 @@ git -C <repo> branch -r --contains <sha>     # empty means the commit is not on 
 
 If the commit isn't on GitHub, tell the user the links will 404 until it is pushed, and offer the newest pushed commit
 (`git -C <repo> rev-parse @{upstream}`) instead. Read files as they are at the pinned commit
-(`git -C <repo> show <sha>:<path>`), not from a working tree that may have changed.
+(`git -C <repo> show "<sha>:<path>"`), not from a working tree that may have changed. Keep the quotes: in zsh,
+`$sha:path` without them reads `:p…` as a modifier and fails; write `"${sha}:path"`.
 
 ## 3b. PR reviews: get the pull request
 
@@ -113,13 +121,14 @@ and find the merge base, which GitHub diffs against:
 
 ```bash
 git -C <repo> fetch origin pull/<number>/head <baseRefName>
-base=$(git -C <repo> merge-base FETCH_HEAD origin/<baseRefName>)   # or merge-base <headRefOid> origin/<baseRefName>
+base=$(git -C <repo> merge-base <headRefOid> origin/<baseRefName>)
 git -C <repo> diff -w --stat $base <headRefOid>                    # what changed, whitespace ignored
 git -C <repo> diff -w $base <headRefOid> -- <file>                 # the hunks GitHub will show
 ```
 
-Read the whole diff, and read enough of the surrounding code at the head to understand it. Also read the PR
-description and any linked issue.
+Read the whole diff (generated files only enough to say what they are), and read enough of the surrounding code at the
+head to understand it. Also read the PR description and any linked issue. If the description is empty or says little,
+describe the PR from the diff, and say so in the first slide.
 
 Rules for a PR review:
 
@@ -129,8 +138,9 @@ Rules for a PR review:
   everything else away. Use `"side": "new"` (the default) for added or kept code, numbered as in the head. Use
   `"side": "old"` for removed code, numbered as in the base.
 - **No-file slides:** a slide without `file` shows the top of the Files changed tab, which suits an overview slide.
-- **Following the PR:** the extension always opens the PR's current Files changed tab. If the PR gets new commits, line
-  numbers can move, so regenerate the walkthrough.
+- **Following the PR:** the Chrome extension always opens the PR's current Files changed tab. If the PR gets new
+  commits, line numbers can move, so regenerate the walkthrough. (The VS Code extension shows the diff between the two
+  commits in the header, so it keeps matching.)
 - **The story:** a reviewer wants it in this order:
   1. What the PR does, and why (one slide).
   2. The changes, in the order that makes the design clear. That is usually the core change first, then the code that
@@ -245,6 +255,11 @@ NODE_NO_WARNINGS=1 node <skill-dir>/scripts/generate-audio.ts "<walkthroughs-fol
 
 - **Output:** one `<slide-id>.mp3` per slide, with `audio` and `durationSec` filled in on each slide. The voice is the
   configured one; override it with `--provider`, `--voice` or `--model`.
+- **Zip:** at the end it packs the walkthrough into `<walkthroughs-folder>/<id>.zip` (walkthrough.json and the MP3s),
+  for the VS Code extension or for sharing. `node <skill-dir>/scripts/pack.ts "<walkthroughs-folder>/<id>"` packs it
+  again by hand.
+- **Testing without paying for speech:** `--provider silent` writes silent MP3s as long as the narration would take.
+  Use it only when the user asks for a test or dummy audio.
 - **Network:** every provider needs it.
 - **Re-runs:** only slides whose narration or voice changed are regenerated. `--force` redoes all of them.
 - **Speed:** about 3 seconds per slide with `edge`.
@@ -260,4 +275,7 @@ Tell the user:
 - the folder path;
 - the number of slides and the total length;
 - the voice used;
-- that the walkthrough appears in the Code Walkthroughs extension's list (toolbar icon) the next time it is opened.
+- that the walkthrough appears in the Code Walkthroughs Chrome extension's list (toolbar icon) the next time it is
+  opened;
+- the zip path, for the VS Code extension: **Open Walkthrough Zip** in its side bar, or right-click the zip in the
+  Explorer.

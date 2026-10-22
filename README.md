@@ -1,9 +1,13 @@
 # Code Walkthroughs on GitHub
 
-Audio walkthroughs of code that play right on GitHub. Claude Code or Antigravity CLI writes them with the **code-walkthrough skill**, and
-the **Code Walkthroughs Chrome extension** plays them. While a slide's narration plays, the extension opens the right
-file on GitHub, scrolls to the right lines and highlights them. Then it moves on to the next slide, which can be
-another part of the same file, another function, or another file.
+Audio walkthroughs of code. Claude Code or Antigravity CLI writes them with the **code-walkthrough skill**, and two
+players play them:
+
+- **Chrome extension:** plays them right on GitHub.
+- **VS Code extension:** plays them in desktop VS Code, vscode.dev and github.dev.
+
+While a slide's narration plays, the player opens the right file, scrolls to the right lines and highlights them. Then
+it moves on to the next slide, which can be another part of the same file, another function, or another file.
 
 There are two types of walkthrough (`type` in `walkthrough.json`):
 
@@ -20,6 +24,7 @@ There are two types of walkthrough (`type` in `walkthrough.json`):
     01-the-problem.mp3                            one MP3 per slide
     02-what-is-new.mp3
     …
+  clear-the-table-solution-1-one-fixed-nudge.zip  the same walkthrough in one file, for the VS Code extension
 ```
 
 ## Install the Chrome extension
@@ -31,13 +36,13 @@ folder you keep, then follow the steps below and choose that folder in step 2.
 **From source:** you need Node.js 22.18 or newer and pnpm.
 
 ```bash
-cd extension
+cd chrome-extension
 pnpm install
-pnpm build      # or `pnpm zip` to produce the zip in extension/.output/
+pnpm build      # or `pnpm zip` to produce the zip in chrome-extension/.output/
 ```
 
 1. Open `chrome://extensions` and turn on **Developer mode** (top right).
-2. Click **Load unpacked** and choose `extension/.output/chrome-mv3`, or the folder you unzipped.
+2. Click **Load unpacked** and choose `chrome-extension/.output/chrome-mv3`, or the folder you unzipped.
 3. Pin **Code Walkthroughs** to the toolbar and click it, then click **Settings**.
 4. Click **Choose folder** and pick your walkthroughs folder. This is the same folder you give the skill.
 5. Chrome may later ask for access again, for example after a restart. When it does, the toolbar list and the player
@@ -65,6 +70,33 @@ its header; it remembers where you put it.
 
 The narration keeps playing while GitHub loads the next file. If a slide has no MP3, the extension reads its narration
 with Chrome's built-in voice.
+
+## Install the VS Code extension
+
+Works in desktop VS Code, [vscode.dev](https://vscode.dev) and [github.dev](https://github.dev).
+
+- **Desktop VS Code:** run **Extensions: Install from VSIX…** and pick
+  [`releases/code-walkthroughs-vscode-0.1.0.vsix`](releases/code-walkthroughs-vscode-0.1.0.vsix).
+- **From source:** `cd vscode-extension && pnpm install && pnpm package` builds the `.vsix` in `vscode-extension/.output/`.
+
+Then:
+
+1. Open the **Code Walkthroughs** side bar (its icon is `<▸>`).
+2. Click the zip button and pick a walkthrough's `.zip`, or right-click a `.zip` in the Explorer and choose
+   **Open Walkthrough Zip…**. The walkthrough is copied into the extension's storage.
+3. Click the walkthrough to start it. The **Player** below the list has the same controls as the Chrome player.
+
+The two types show up differently:
+
+- **Code tour:** each slide opens its file at the pinned commit.
+- **PR review:** each slide opens the file's diff from the PR's merge base to its head, in VS Code's split or unified
+  diff.
+
+Files are read straight from GitHub at those commits, so no checkout is needed. Private repositories ask you to sign in
+to GitHub once.
+
+To use it on vscode.dev or github.dev, it must first be published to the Marketplace (or Open VSX); until then, use
+desktop VS Code. See [vscode-extension/README.md](vscode-extension/README.md) for how it is built and tested.
 
 ## Install the skill
 
@@ -115,6 +147,7 @@ The agent (Claude or Gemini) writes the narration; a text-to-speech provider rea
 | `edge` | none | Default. Free Microsoft Edge neural voices (`msedge-tts`, pure JavaScript). |
 | `openai` | `OPENAI_API_KEY` | `gpt-4o-mini-tts` (default), `tts-1`, `tts-1-hd`. Voice `alloy` by default. |
 | `gemini` | `GEMINI_API_KEY` or `GOOGLE_API_KEY` | `gemini-3.8-flash-lite-tts` (default, cheapest), `gemini-3.8-flash-tts`, `gemini-3.1-flash-tts-preview`, `gemini-2.5-pro-preview-tts`. Voice `Charon` by default. |
+| `silent` | none | For testing: silent MP3s as long as the narration would take to read. |
 
 **API keys.** Put them in a `.env` file at the root of this repository; it is git-ignored, and `.env.example` shows the
 format. Keys already in your environment take precedence. If you installed the skill as a plugin or with `--copy`, put
@@ -150,7 +183,8 @@ The agent then does the following:
 3. Writes `walkthrough.json` and checks every file and line range with `validate.ts`.
 4. Generates the MP3s.
 
-When it finishes, open the extension's list and start the walkthrough.
+When it finishes, open the Chrome extension's list and start the walkthrough. For VS Code, open the
+`<id>.zip` the audio step writes next to the walkthrough's folder.
 
 For a pull request review, give it the PR:
 
@@ -168,11 +202,15 @@ it. That means short sentences, common words, no idioms, and each technical term
 ## Repository layout
 
 ```
-extension/                 Chrome extension: WXT + Preact + TypeScript
+chrome-extension/          Chrome extension: WXT + Preact + TypeScript
   entrypoints/             background (controller), offscreen (audio), github.content (player), popup, options
   components/              Player, Library
   lib/                     walkthrough format, messages, folder access, highlighting
-skills/code-walkthrough/   the skill (Claude Code and Antigravity CLI): SKILL.md, scripts/ (config, validate, generate-audio, tts), schema
+vscode-extension/          VS Code extension (desktop and web): esbuild + Preact + TypeScript
+  src/                     extension, library (zips → storage), navigator (editors, diffs, highlights), player view
+  test/                    unit, in-VS-Code (desktop and web) and click-through UI tests
+skills/code-walkthrough/   the skill (Claude Code and Antigravity CLI): SKILL.md, scripts/ (config, validate, generate-audio, tts, pack), schema
+releases/                  prebuilt Chrome extension zip and VS Code .vsix
 .claude-plugin/            Claude Code plugin and marketplace manifests
 plugin.json                Antigravity CLI plugin manifest (its skills are in skills/)
 scripts/install-skill.sh   skill installer
